@@ -1,0 +1,22 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env
+.env.local
+.vercel
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todos.json
+.env*
+*.env
+
+# Tesseract runtime assets, vendored from node_modules by scripts/sync-tesseract-assets.ts
+# (prebuild). Regenerated from the lockfile-pinned packages — never committed.
+public/tesseract
+public/tessdata

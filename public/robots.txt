@@ -1,0 +1,4 @@
+# https://www.robotstxt.org/robotstxt.html
+# Contact: contact@imagineapp.net
+User-agent: *
+Disallow:

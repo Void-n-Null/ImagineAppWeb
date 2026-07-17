@@ -1,0 +1,562 @@
+/*
+ * Imagine App design tokens — "Price Tag" theme, v2.
+ *
+ * A floor instrument with SaaS-grade finish: used one-handed, mid-customer-
+ * conversation, under bright store lighting. Dark blue-tinted slate; **blue
+ * leads** (interactive, CTAs, active states), and Best Buy tag yellow is
+ * demoted to a garnish — it appears ONLY as the price-tag selection chip and
+ * the wordmark's question mark. If everything is tagged, nothing is.
+ *
+ * Shape language (adapted from Lific, not copied): soft pill chips with
+ * tinted "subtle" fills instead of borders, generous card radii, a floating
+ * chrome dock that casts a real shadow, and a faint top-edge glint on raised
+ * surfaces so elevation reads without glow. No gradients, no glassmorphism.
+ *
+ * Contrast (WCAG relative-luminance, computed not eyeballed):
+ *   text    #e9eef5 on bg 16.0:1 · surface 14.6:1 · raised 13.1:1   (AAA)
+ *   muted   #9fb0c3 on bg  8.4:1 · surface  7.7:1 · raised  6.9:1   (AAA)
+ *   faint   #8296ac on bg  6.1:1 · surface  5.6:1                   (AA+)
+ *   action  #6cb1ff on bg  8.3:1 · raised 6.8:1 · action-subtle 6.6:1 (AAA/AA+)
+ *   action-ink #06121f on action fill 8.4:1                         (AAA)
+ *   ok      #4ade80 on ok-subtle 8.2:1 · danger #ff7b72 on danger-subtle 6.3:1
+ *   tag     #ffd60a on bg 13.2:1 · ink-on-tag #171200 13.3:1        (AAA)
+ * Subtle fills are never the only signal — active states also change text
+ * color and weight, and carry aria-current.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400..900;1,400..900&display=swap');
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ── Elevation ramp (blue-tinted slate, hue ~215°) ── */
+  --bg: #0d131b; /* page floor */
+  --surface: #151d28; /* cards, panels */
+  --raised: #1c2634; /* chips, inputs, floating chrome */
+  --line: #26313f; /* hairlines */
+  --line-strong: #3e4f64; /* input boundaries */
+
+  /* ── Text ── */
+  --text: #e9eef5;
+  --text-muted: #9fb0c3;
+  --text-faint: #8296ac;
+
+  /* ── Interactive (blue leads) ── */
+  --action: #6cb1ff;
+  --action-ink: #06121f; /* text on action fills */
+  --action-subtle: #16293f; /* tinted fill for active chips/pills */
+
+  /* ── The tag (garnish only: selection chip + wordmark "?") ── */
+  --tag: #ffd60a;
+  --tag-ink: #171200;
+
+  /* ── Status ── */
+  --ok: #4ade80;
+  --ok-subtle: #12301f;
+  --danger: #ff7b72;
+  --danger-subtle: #361a19;
+
+  /* ── Depth ── */
+  --glint: rgba(233, 238, 245, 0.055); /* top-edge highlight on raised chrome */
+  --shadow-float: 0 12px 32px rgb(4 8 14 / 0.5), 0 2px 8px rgb(4 8 14 / 0.35);
+  --shadow-card: 0 1px 2px rgb(4 8 14 / 0.3);
+
+  /* shadcn-compatible aliases (components.json) */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--raised);
+  --popover-foreground: var(--text);
+  --primary: var(--action);
+  --primary-foreground: var(--action-ink);
+  --secondary: var(--raised);
+  --secondary-foreground: var(--text);
+  --muted: var(--raised);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--action-subtle);
+  --accent-foreground: var(--action);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--bg);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--action);
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.3, 1.35, 0.45, 1); /* slight overshoot */
+
+  /* Role-based type scale — eight steps, mobile-tuned. */
+  --text-micro: 0.6875rem; /* 11px — badges, tab labels, chips-meta */
+  --text-caption: 0.75rem; /* 12px — slugs, metadata */
+  --text-body-sm: 0.8125rem; /* 13px — dense list secondary lines */
+  --text-body: 0.875rem; /* 14px — default UI text */
+  --text-body-lg: 1rem; /* 16px — inputs (prevents iOS zoom), row titles */
+  --text-heading: 1.125rem; /* 18px — section headings */
+  --text-title: 1.375rem; /* 22px — page titles */
+  --text-display: 2rem; /* 32px — hero moments */
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-action: var(--action);
+  --color-action-ink: var(--action-ink);
+  --color-action-subtle: var(--action-subtle);
+  --color-tag: var(--tag);
+  --color-tag-ink: var(--tag-ink);
+  --color-ok: var(--ok);
+  --color-ok-subtle: var(--ok-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+
+  /* shadcn aliases */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Floor tool: no accidental pull-to-refresh while scrolling model lists. */
+  overscroll-behavior-y: contain;
+}
+
+/* Prices, token counts, context windows: keep digits from jittering. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Horizontal rails scroll without a visible bar. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Aisle signage: how sections announce themselves throughout the app. */
+.aisle-label {
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/*
+ * The price tag — the app's ONLY yellow: the mark for "this is your model".
+ * Notched left edge + punched hole, like the physical shelf tag.
+ */
+.price-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--tag);
+  color: var(--tag-ink);
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1875rem 0.5rem 0.1875rem 0.875rem;
+  border-radius: 0.25rem;
+  clip-path: polygon(0.45rem 0, 100% 0, 100% 100%, 0.45rem 100%, 0 50%);
+}
+
+.price-tag::before {
+  content: '';
+  position: absolute;
+  left: 0.4rem;
+  top: 50%;
+  translate: 0 -50%;
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+  background: var(--bg); /* the punched hole */
+}
+
+/*
+ * Raised chrome: floating dock, feature panels. The glint is the dark-mode
+ * version of Lific's inset highlight — elevation without glow.
+ */
+.chrome-float {
+  background: color-mix(in oklab, var(--raised) 92%, transparent);
+  border: 1px solid var(--line);
+  box-shadow:
+    inset 0 1px 0 var(--glint),
+    var(--shadow-float);
+  backdrop-filter: blur(10px);
+}
+
+.card-glint {
+  box-shadow:
+    inset 0 1px 0 var(--glint),
+    var(--shadow-card);
+}
+
+/*
+ * ── Dock (bottom tab bar) motion ────────────────────────────────────────
+ * One shared pill glides between tabs (iOS tab-bar feel) instead of five
+ * independent background toggles. Transform+opacity only.
+ */
+.dock-pill {
+  /* Frosted selection: translucent action tint + backdrop blur + a faint
+   * halo, instead of a flat subtle fill. The one sanctioned glass moment. */
+  background: color-mix(in oklab, var(--action) 16%, transparent);
+  backdrop-filter: blur(8px) saturate(1.4);
+  box-shadow:
+    inset 0 1px 0 rgba(233, 238, 245, 0.08),
+    0 0 18px color-mix(in oklab, var(--action) 22%, transparent);
+  transition:
+    translate 340ms var(--ease-spring),
+    opacity 180ms ease;
+}
+
+/* iOS 17-style symbol bounce when a tab becomes active. */
+.tab-bounce {
+  animation: tab-bounce 420ms var(--ease-out-quart);
+}
+
+@keyframes tab-bounce {
+  0% {
+    scale: 1;
+  }
+  35% {
+    scale: 1.18;
+    translate: 0 -1.5px;
+  }
+  100% {
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+/* Cart badge pops when the count changes: "did that add land?" — yes. */
+.badge-pop {
+  animation: badge-pop 340ms var(--ease-spring);
+}
+
+@keyframes badge-pop {
+  from {
+    scale: 0.4;
+  }
+  to {
+    scale: 1;
+  }
+}
+
+/* Staggered entrance for page sections. Transform+opacity only. */
+.rise-in {
+  animation: rise-in 480ms var(--ease-out-expo) both;
+}
+
+/* Sticky quick-action bar entrance (detail page, IMA-29). */
+.slide-down {
+  animation: slide-down 240ms var(--ease-out-quart) both;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/*
+ * ── Chat (IMA-6) ────────────────────────────────────────────────────────
+ */
+
+/* Assistant activity: text itself shimmers — quieter than any spinner. */
+.status-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--text-faint) 0%,
+    var(--text) 45%,
+    var(--text-faint) 90%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-slide 1.8s linear infinite;
+}
+
+@keyframes shimmer-slide {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Streaming caret at the end of in-flight assistant text. */
+.stream-cursor::after {
+  content: '';
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 0.15em;
+  vertical-align: -0.15em;
+  border-radius: 2px;
+  background: var(--action);
+  animation: cursor-blink 1s steps(2, start) infinite;
+}
+
+@keyframes cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Markdown typography for assistant messages: the app's type scale, not
+ * the typography plugin's — full control, zero prose-invert drift. */
+.chat-prose {
+  font-size: var(--text-body);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.chat-prose > :first-child {
+  margin-top: 0;
+}
+
+.chat-prose > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-prose p {
+  margin: 0.55em 0;
+}
+
+.chat-prose h1,
+.chat-prose h2,
+.chat-prose h3,
+.chat-prose h4 {
+  margin: 1em 0 0.4em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.chat-prose h1 {
+  font-size: var(--text-heading);
+}
+
+.chat-prose h2 {
+  font-size: var(--text-body-lg);
+}
+
+.chat-prose h3,
+.chat-prose h4 {
+  font-size: var(--text-body);
+}
+
+.chat-prose ul,
+.chat-prose ol {
+  margin: 0.55em 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.chat-prose ul {
+  list-style: disc;
+}
+
+.chat-prose ol {
+  list-style: decimal;
+}
+
+.chat-prose li::marker {
+  color: var(--text-faint);
+}
+
+.chat-prose strong {
+  font-weight: 700;
+}
+
+.chat-prose a {
+  color: var(--action);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--action) 45%, transparent);
+  text-underline-offset: 2px;
+}
+
+.chat-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  padding: 0.1em 0.35em;
+}
+
+.chat-prose pre {
+  margin: 0.7em 0;
+  padding: 0.75rem;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.chat-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.chat-prose blockquote {
+  margin: 0.7em 0;
+  padding-left: 0.85em;
+  border-left: 3px solid var(--line-strong);
+  color: var(--text-muted);
+}
+
+.chat-prose hr {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+.chat-prose table {
+  margin: 0.7em 0;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body-sm);
+}
+
+.chat-prose th,
+.chat-prose td {
+  padding: 0.4em 0.6em;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.chat-prose th {
+  background: var(--raised);
+  font-weight: 700;
+}
+
+/* Skip link: hidden until keyboard-focused. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--action);
+  color: var(--action-ink);
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Visible-when-needed focus. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Text-entry fields are different: they match :focus-visible on every
+ * focus (even touch), and the floating offset ring around a rounded field
+ * reads as a rendering glitch, not an affordance. They get a tight 1.5px
+ * tint hugging the field edge instead — and fields living inside composed
+ * chrome that already signals focus (the chat composer dock) opt all the
+ * way out with .focus-quiet: there the caret is the affordance.
+ */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--action) 55%, transparent);
+}
+
+input.focus-quiet:focus-visible,
+textarea.focus-quiet:focus-visible {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+}

@@ -1,0 +1,4 @@
+Contact: mailto:contact@imagineapp.net
+Expires: 2027-07-01T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://imagineapp.net/.well-known/security.txt
