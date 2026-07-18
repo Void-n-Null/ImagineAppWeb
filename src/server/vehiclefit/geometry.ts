@@ -29,7 +29,19 @@ export interface FitResult {
   pAny: number
   recommended: 'upright' | 'tilted' | 'flat' | 'none'
   samples: number
+  /**
+   * Deterministic robustness check: the box padded by 2 in on every
+   * dimension still fits a cargo area shrunk by 2 in on every dimension.
+   * When false, pAny is capped at WORST_CASE_CONFIDENCE_CAP.
+   */
+  worstCaseFit: boolean
 }
+
+/** Margin used by the deterministic worst-case robustness check, inches. */
+export const WORST_CASE_MARGIN_IN = 2
+
+/** Confidence ceiling applied when the worst-case check fails. */
+export const WORST_CASE_CONFIDENCE_CAP = 0.8
 
 /**
  * Estimate TV-box fit with independent, uniformly distributed measurement
@@ -70,19 +82,12 @@ export function computeFit(input: ComputeFitInput): FitResult {
       random,
     )
 
-    // A boxed TV can load diagonally across the cargo floor. Opening width is
-    // used as a conservative floor-width proxy; 5% discounts unusable corners.
-    const availableLength =
-      0.95 * Math.sqrt(cargoLength * cargoLength + openingWidth * openingWidth)
-    const lengthFits = availableLength >= box.w
-
-    const upright =
-      lengthFits && openingHeight >= box.h && openingWidth >= box.d
-    const tilted =
-      lengthFits &&
-      rectangleFitsWithRotation(box.h, box.d, openingWidth, openingHeight)
-    const flat =
-      lengthFits && openingHeight >= box.d && openingWidth >= box.h
+    const { upright, tilted, flat } = orientationsFit(
+      box,
+      cargoLength,
+      openingWidth,
+      openingHeight,
+    )
 
     if (upright) uprightCount += 1
     if (tilted) tiltedCount += 1
@@ -90,17 +95,57 @@ export function computeFit(input: ComputeFitInput): FitResult {
     if (upright || tilted || flat) anyCount += 1
   }
 
+  const worstCase = orientationsFit(
+    {
+      w: input.box.w + WORST_CASE_MARGIN_IN,
+      h: input.box.h + WORST_CASE_MARGIN_IN,
+      d: input.box.d + WORST_CASE_MARGIN_IN,
+    },
+    Math.max(0, input.cargo.cargoLengthIn - WORST_CASE_MARGIN_IN),
+    Math.max(0, input.cargo.openingWidthIn - WORST_CASE_MARGIN_IN),
+    Math.max(0, input.cargo.openingHeightIn - WORST_CASE_MARGIN_IN),
+  )
+  const worstCaseFit = worstCase.upright || worstCase.tilted || worstCase.flat
+
   const pUpright = uprightCount / FIT_SAMPLE_COUNT
   const pTilted = tiltedCount / FIT_SAMPLE_COUNT
   const pFlat = flatCount / FIT_SAMPLE_COUNT
-  const pAny = anyCount / FIT_SAMPLE_COUNT
+  const rawPAny = anyCount / FIT_SAMPLE_COUNT
+  const pAny = worstCaseFit
+    ? rawPAny
+    : Math.min(rawPAny, WORST_CASE_CONFIDENCE_CAP)
   return {
     pUpright,
     pTilted,
     pFlat,
     pAny,
-    recommended: recommendedOrientation(pUpright, pTilted, pFlat, pAny),
+    recommended: recommendedOrientation(pUpright, pTilted, pFlat, rawPAny),
     samples: FIT_SAMPLE_COUNT,
+    worstCaseFit,
+  }
+}
+
+/**
+ * Orientation feasibility for one concrete set of dimensions. A boxed TV can
+ * load diagonally across the cargo floor: opening width is used as a
+ * conservative floor-width proxy; 5% discounts unusable corners.
+ */
+function orientationsFit(
+  box: TvBoxDimensions,
+  cargoLength: number,
+  openingWidth: number,
+  openingHeight: number,
+): { upright: boolean; tilted: boolean; flat: boolean } {
+  const availableLength =
+    0.95 * Math.sqrt(cargoLength * cargoLength + openingWidth * openingWidth)
+  const lengthFits = availableLength >= box.w
+
+  return {
+    upright: lengthFits && openingHeight >= box.h && openingWidth >= box.d,
+    tilted:
+      lengthFits &&
+      rectangleFitsWithRotation(box.h, box.d, openingWidth, openingHeight),
+    flat: lengthFits && openingHeight >= box.d && openingWidth >= box.h,
   }
 }
 

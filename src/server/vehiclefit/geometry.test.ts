@@ -61,6 +61,31 @@ describe('computeFit', () => {
     expect(result.pUpright).toBeGreaterThan(0.5)
   })
 
+  it('caps confidence at 80% when the worst-case margin check fails', () => {
+    // 65-inch box in the CR-V fixture: samples overwhelmingly fit tilted,
+    // but a +2 in box against a -2 in cargo area does not.
+    const result = computeFit({
+      box: { w: 62, h: 41, d: 9 },
+      tolerance: { w: 2, h: 2, d: 2 },
+      cargo: crvCargo(),
+      seed: 7,
+    })
+
+    expect(result.worstCaseFit).toBe(false)
+    expect(result.pAny).toBeLessThanOrEqual(0.8)
+  })
+
+  it('keeps full confidence when the worst-case margin check passes', () => {
+    const result = computeFit({
+      box: { w: 44, h: 29, d: 8 },
+      tolerance: { w: 2, h: 2, d: 2 },
+      cargo: crvCargo(),
+      seed: 9,
+    })
+
+    expect(result.worstCaseFit).toBe(true)
+  })
+
   it('produces only exact zero-or-one probabilities without tolerances', () => {
     const result = computeFit({
       box: { w: 44, h: 29, d: 8 },

@@ -133,6 +133,9 @@ Before calling this tool, use web_search to find cargo length with seats down, o
       `- Cargo source: ${specsSource}${estimated ? ' (partly estimated)' : ''}`,
       `- Estimated box: ${formatInches(estimate.box.w)} W × ${formatInches(estimate.box.h)} H × ${formatInches(estimate.box.d)} D (±${formatInches(estimate.tolerance.w)}/±${formatInches(estimate.tolerance.h)}/±${formatInches(estimate.tolerance.d)})`,
       `- Fit probabilities: ${percent(result.pUpright)} upright, ${percent(result.pTilted)} tilted, ${percent(result.pFlat)} flat; ${percent(result.pAny)} any orientation`,
+      result.worstCaseFit
+        ? '- Worst-case margin check passed: box +2 in still fits cargo -2 in.'
+        : '- Worst-case margin check failed (box +2 in vs cargo -2 in), so confidence is capped at 80%. Tell the user the fit depends on exact measurements.',
       `- Recommended orientation: ${result.recommended}`,
       `- Verdict: ${verdict}.`,
       '- Flat transport is not recommended for panels.',
