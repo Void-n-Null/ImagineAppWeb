@@ -510,8 +510,20 @@ body {
   text-transform: uppercase;
 }
 
+.wif-vs-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--wif-gold) 35%, var(--line)),
+    transparent
+  );
+}
+
 .wif-vs {
   display: grid;
+  flex-shrink: 0;
   place-items: center;
   width: 2.1rem;
   height: 2.1rem;

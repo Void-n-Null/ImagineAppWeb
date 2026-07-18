@@ -141,6 +141,8 @@ Before calling this tool, use web_search to find cargo length with seats down, o
       '- Flat transport is not recommended for panels.',
       '',
       `[FitVerdict(${sku},${pAnyPercent},${result.recommended},${tokenVehicleLabel(vehicleLabel)},${estimated ? 1 : 0},${tokenDimension(estimate.box.h)},${tokenDimension(estimate.box.d)},${tokenDimension(openingWidthIn)},${tokenDimension(openingHeightIn)})]`,
+      '',
+      'Copy the [FitVerdict(...)] line above into your reply verbatim, on its own line, so the verdict card renders.',
     ]
     return lines.join('\n')
   },

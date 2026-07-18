@@ -570,7 +570,7 @@ function MatchupStrip({
 }) {
   return (
     <div className="mt-5">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2.5">
+      <div className="flex flex-col gap-2">
         <div className="wif-slot">
           <p className="wif-slot-label">The TV</p>
           {product ? (
@@ -600,9 +600,14 @@ function MatchupStrip({
           )}
         </div>
 
-        <span aria-hidden="true" className="wif-vs self-center">
-          vs
-        </span>
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-3 px-1"
+        >
+          <span className="wif-vs-rule" />
+          <span className="wif-vs">vs</span>
+          <span className="wif-vs-rule" />
+        </div>
 
         <div className="wif-slot">
           <label className="block">

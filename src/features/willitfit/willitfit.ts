@@ -25,19 +25,26 @@ export function fitVerdictTier(percentAny: number): FitVerdictTier {
   return 'no-fit'
 }
 
-/** Read only the final assistant response, which is the turn's final ruling. */
+/**
+ * Recover the verdict from the transcript. The compute_tv_fit TOOL RESULT is
+ * ground truth (the tool emits the token deterministically), so scan tool
+ * messages newest-first before trusting the assistant to have copied the
+ * token into its reply. Smaller models routinely drop it.
+ */
 export function extractFitVerdictFromTranscript(
   transcript: ChatMessage[],
 ): FitVerdictSegment | null {
-  for (let index = transcript.length - 1; index >= 0; index--) {
-    const message = transcript[index]
-    if (message.role !== 'assistant') continue
-    return (
-      parseRichSegments(message.content).find(
-        (segment): segment is FitVerdictSegment =>
-          segment.kind === 'fit-verdict',
-      ) ?? null
-    )
+  const fromRole = (role: 'tool' | 'assistant'): FitVerdictSegment | null => {
+    for (let index = transcript.length - 1; index >= 0; index--) {
+      const message = transcript[index]
+      if (message.role !== role) continue
+      const segment = parseRichSegments(message.content).find(
+        (candidate): candidate is FitVerdictSegment =>
+          candidate.kind === 'fit-verdict',
+      )
+      if (segment) return segment
+    }
+    return null
   }
-  return null
+  return fromRole('tool') ?? fromRole('assistant')
 }
