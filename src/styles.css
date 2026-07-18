@@ -342,114 +342,202 @@ body {
   animation: shimmer-slide 1.8s linear infinite;
 }
 
-/* ── Will It Fit (IMA-51) ─────────────────────────────────────────────── */
+/* ── Will It Fit — "The Board" (IMA-51) ──────────────────────────────── */
 
-.will-fit-page {
-  --will-fit-gold: color-mix(in srgb, var(--tag) 84%, var(--tag-ink));
-  --will-fit-gold-deep: color-mix(in srgb, var(--tag-ink) 78%, var(--surface));
+.wif-page {
+  --wif-gold: color-mix(in srgb, var(--tag) 84%, var(--tag-ink));
+  --wif-gold-dim: color-mix(in srgb, var(--wif-gold) 30%, var(--surface));
 }
 
-.will-fit-marquee {
-  position: relative;
-  overflow: hidden;
-  padding: 1.5rem 1rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--will-fit-gold) 42%, var(--line));
-  border-radius: 1rem;
-  background: var(--surface);
+/* Wordmark: confident, small, gold. The board gets the size, not the title. */
+.wif-wordmark {
+  color: var(--wif-gold);
+  font-size: var(--text-title);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-.will-fit-bulbs {
-  position: absolute;
-  inset: 0.55rem 0.75rem;
-  pointer-events: none;
+.wif-wordmark-mark {
+  color: var(--text-faint);
 }
 
-.will-fit-bulbs::before,
-.will-fit-bulbs::after {
-  position: absolute;
-  right: 0;
-  left: 0;
-  height: 4px;
+.wif-onair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--wif-gold) 45%, var(--line));
+  border-radius: 999px;
+  color: var(--wif-gold);
+  font-size: var(--text-micro);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.wif-onair::before {
+  width: 6px;
+  height: 6px;
   content: '';
-  background-image: radial-gradient(
-    circle,
-    var(--will-fit-gold) 0 1.65px,
-    transparent 2.35px
+  border-radius: 999px;
+  background: var(--wif-gold);
+  animation: wif-blink 1.6s steps(2, end) infinite;
+}
+
+@keyframes wif-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/*
+ * The board. Not a card: a stage. A soft spotlight behind the digits and a
+ * scoreboard shelf below them. Fixed height so idle ??, the scramble, and
+ * the verdict all land on the same spot with zero layout shift.
+ */
+.wif-board {
+  min-height: clamp(19rem, 58vw, 23rem);
+  padding: 1.5rem 1rem 2.25rem;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 38%,
+    color-mix(in srgb, var(--wif-gold) 9%, transparent),
+    transparent
   );
-  background-size: 13px 4px;
-  animation: will-fit-bulbs 900ms steps(2, end) infinite alternate;
 }
 
-.will-fit-bulbs::before {
-  top: 0;
+.wif-board-shelf {
+  position: absolute;
+  right: 12%;
+  bottom: 1rem;
+  left: 12%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--wif-gold) 55%, var(--line)) 30%,
+    color-mix(in srgb, var(--wif-gold) 55%, var(--line)) 70%,
+    transparent
+  );
 }
 
-.will-fit-bulbs::after {
-  bottom: 0;
+/* The monument. */
+.wif-digits {
+  font-size: clamp(6.5rem, 36vw, 10rem);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
 }
 
-@keyframes will-fit-bulbs {
+.wif-digits-unit {
+  margin-left: 0.04em;
+  font-size: 0.3em;
+  letter-spacing: -0.02em;
+  vertical-align: 1.35em;
+}
+
+.wif-gold {
+  color: var(--wif-gold);
+}
+
+.wif-dim {
+  color: var(--wif-gold-dim);
+}
+
+/* Verdict stamp: inked, slightly crooked, disciplined. */
+.wif-stamp {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.3rem 0.85rem;
+  border: 2px solid currentcolor;
+  border-radius: 0.45rem;
+  font-size: var(--text-body-sm);
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  animation: wif-stamp-in 360ms var(--ease-out-expo) 950ms both;
+}
+
+.wif-stamp--fits {
+  color: var(--ok);
+}
+
+.wif-stamp--tight {
+  color: var(--wif-gold);
+}
+
+.wif-stamp--no-fit {
+  color: var(--danger);
+}
+
+@keyframes wif-stamp-in {
   from {
-    opacity: 0.38;
+    opacity: 0;
+    transform: rotate(-3deg) scale(1.7);
   }
   to {
     opacity: 1;
+    transform: rotate(-3deg) scale(1);
   }
 }
 
-.will-fit-kicker,
-.will-fit-section-title {
+/* Stage progress ticks under the lower-third caption. */
+.wif-tick {
+  background: var(--line-strong);
+}
+
+.wif-tick--done {
+  background: var(--wif-gold);
+}
+
+/* Matchup slots. */
+.wif-slot {
+  padding: 0.7rem 0.85rem 0.75rem;
+  border-radius: 0.9rem;
+  background: var(--surface);
+  text-align: left;
+}
+
+.wif-slot-label {
+  display: block;
+  color: var(--wif-gold);
   font-size: var(--text-micro);
   font-weight: 900;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-.will-fit-kicker {
-  color: var(--will-fit-gold);
-}
-
-.will-fit-section-title {
-  color: var(--text-muted);
-}
-
-.will-fit-title {
-  margin: 0.15rem 0 0;
-  color: var(--will-fit-gold);
-  font-size: clamp(2.8rem, 15vw, 4.5rem);
+.wif-vs {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1.5px solid color-mix(in srgb, var(--wif-gold) 45%, var(--line));
+  border-radius: 999px;
+  color: var(--wif-gold);
+  font-size: var(--text-micro);
   font-weight: 900;
-  line-height: 0.82;
-  letter-spacing: -0.085em;
   text-transform: uppercase;
-  transform: rotate(-2deg);
-  transform-origin: left center;
-  text-shadow:
-    2px 2px 0 var(--will-fit-gold-deep),
-    4px 4px 0 color-mix(in srgb, var(--will-fit-gold-deep) 80%, transparent);
 }
 
-.will-fit-contender {
-  border: 1px solid color-mix(in srgb, var(--will-fit-gold) 22%, var(--line));
-}
-
-.will-fit-action {
+.wif-run {
   box-shadow: 3px 4px 0 color-mix(in srgb, var(--action-ink) 65%, var(--bg));
 }
 
-.will-fit-tone-gold {
-  color: var(--will-fit-gold);
-}
-
-.will-fit-reveal--fits::before {
+/* Reveal effects. */
+.wif-board--lit::before {
   position: absolute;
   inset: 0;
   content: '';
   pointer-events: none;
-  background: color-mix(in srgb, var(--will-fit-gold) 14%, transparent);
-  animation: will-fit-flash 480ms var(--ease-out-expo) both;
+  background: color-mix(in srgb, var(--wif-gold) 13%, transparent);
+  animation: wif-flash 520ms var(--ease-out-expo) both;
 }
 
-@keyframes will-fit-flash {
+@keyframes wif-flash {
   from {
     opacity: 0;
   }
@@ -457,34 +545,29 @@ body {
     opacity: 1;
   }
   to {
-    opacity: 0.35;
+    opacity: 0.3;
   }
 }
 
-.will-fit-reveal-headline {
-  line-height: 0.9;
-  text-transform: uppercase;
-}
-
-.will-fit-particle-burst {
+.wif-burst {
   position: absolute;
-  top: 5.5rem;
+  top: 42%;
   left: 50%;
   z-index: 0;
   width: 1px;
   height: 1px;
 }
 
-.will-fit-particle {
+.wif-particle {
   position: absolute;
   width: 5px;
   height: 5px;
   border-radius: 999px;
-  background: var(--will-fit-gold);
-  animation: will-fit-particle 700ms var(--ease-out-expo) both;
+  background: var(--wif-gold);
+  animation: wif-particle 700ms var(--ease-out-expo) both;
 }
 
-@keyframes will-fit-particle {
+@keyframes wif-particle {
   from {
     opacity: 0;
     transform: translate(0, 0) scale(0.2);
@@ -494,15 +577,15 @@ body {
   }
   to {
     opacity: 0;
-    transform: translate(var(--will-fit-x), var(--will-fit-y)) scale(0.5);
+    transform: translate(var(--wif-x), var(--wif-y)) scale(0.5);
   }
 }
 
-.will-fit-buzzer {
-  animation: will-fit-buzzer 280ms linear 1;
+.wif-buzzer {
+  animation: wif-buzzer 280ms linear 1;
 }
 
-@keyframes will-fit-buzzer {
+@keyframes wif-buzzer {
   0%,
   100% {
     transform: translateX(0);
@@ -516,15 +599,18 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .will-fit-bulbs,
-  .will-fit-bulbs::before,
-  .will-fit-bulbs::after,
-  .will-fit-reveal--fits::before,
-  .will-fit-buzzer {
+  .wif-onair::before,
+  .wif-board--lit::before,
+  .wif-stamp,
+  .wif-buzzer {
     animation: none;
   }
 
-  .will-fit-particle-burst {
+  .wif-stamp {
+    opacity: 1;
+  }
+
+  .wif-burst {
     display: none;
   }
 }
