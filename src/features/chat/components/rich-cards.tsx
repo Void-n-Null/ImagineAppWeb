@@ -166,6 +166,34 @@ export function orientationLabel(
   }
 }
 
+/**
+ * The angle the box cross-section is actually drawn at, measured from
+ * upright. Not decoration: for the tilted orientation this solves for the
+ * smallest lean whose rotated bounding box fits the aperture, matching the
+ * geometry engine's rotated-containment predicate. Returns 0 when upright
+ * (or when nothing fits, so the overflow is drawn honestly), 90 for flat.
+ */
+export function crossSectionTiltDegrees(
+  verdict: Pick<
+    FitVerdictSegment,
+    'recommended' | 'boxH' | 'boxD' | 'openW' | 'openH'
+  >,
+): number {
+  if (verdict.recommended === 'upright' || verdict.recommended === 'none') {
+    return 0
+  }
+  if (verdict.recommended === 'flat') return 90
+  for (let degrees = 0; degrees <= 90; degrees += 1) {
+    const radians = (degrees * Math.PI) / 180
+    const width =
+      verdict.boxD * Math.cos(radians) + verdict.boxH * Math.sin(radians)
+    const height =
+      verdict.boxD * Math.sin(radians) + verdict.boxH * Math.cos(radians)
+    if (width <= verdict.openW && height <= verdict.openH) return degrees
+  }
+  return 0
+}
+
 export function FitCrossSection({
   verdict,
   toneClass,
@@ -173,16 +201,14 @@ export function FitCrossSection({
   verdict: FitVerdictSegment
   toneClass: string
 }) {
-  const rotation = verdict.recommended === 'tilted' ? 15 : 0
+  const rotation = crossSectionTiltDegrees(verdict)
   const radians = (rotation * Math.PI) / 180
+  // Bounding box of the rotated cross-section; drives both the fit scale
+  // and whether the drawing honestly overflows the aperture.
   const boxWidth =
-    rotation === 0
-      ? verdict.boxD
-      : verdict.boxD * Math.cos(radians) + verdict.boxH * Math.sin(radians)
+    verdict.boxD * Math.cos(radians) + verdict.boxH * Math.sin(radians)
   const boxHeight =
-    rotation === 0
-      ? verdict.boxH
-      : verdict.boxD * Math.sin(radians) + verdict.boxH * Math.cos(radians)
+    verdict.boxD * Math.sin(radians) + verdict.boxH * Math.cos(radians)
   const scale = Math.min(
     172 / Math.max(verdict.openW, boxWidth),
     82 / Math.max(verdict.openH, boxHeight),
@@ -243,6 +269,7 @@ export function FitCrossSection({
         >
           Box {formatDimension(verdict.boxD)} × {formatDimension(verdict.boxH)}{' '}
           in
+          {rotation > 0 && rotation < 90 ? `, leaned ${rotation}°` : ''}
         </text>
       </svg>
     </div>
