@@ -5,6 +5,7 @@
  *   [Product(8041012)]              → product card
  *   [Compare(8041012,8041013)]     → side-by-side strip, 2-5 SKUs
  *   [ShowSearch(query="65 inch")]  → tappable link into /search
+ *   [FitVerdict(...)]               → vehicle-fit verdict card
  *
  * Pure string → segments; no React. The model writes tokens inline in its
  * markdown; the Markdown component renders text segments through
@@ -18,22 +19,67 @@
  * unknown params are tolerated and ignored, not errors.
  */
 
+const FIT_RECOMMENDATIONS = ['upright', 'tilted', 'flat', 'none'] as const
+
+type FitRecommendation = (typeof FIT_RECOMMENDATIONS)[number]
+
 export type RichSegment =
   | { kind: 'text'; text: string }
   | { kind: 'product'; sku: number }
   | { kind: 'compare'; skus: number[] }
   | { kind: 'search'; query: string }
+  | FitVerdictSegment
+
+export type FitVerdictSegment = {
+  kind: 'fit-verdict'
+  sku: number
+  percentAny: number
+  recommended: FitRecommendation
+  vehicleLabel: string
+  estimated: boolean
+  boxH: number
+  boxD: number
+  openW: number
+  openH: number
+}
 
 export const COMPARE_MIN_SKUS = 2
 export const COMPARE_MAX_SKUS = 5
 
-const TOKEN_RE = /\[(Product|Compare|ShowSearch)\(([^)\]]*)\)\]/g
+const TOKEN_RE = /\[(Product|Compare|ShowSearch|FitVerdict)\(([^)\]]*)\)\]/g
 
 function parseSku(raw: string): number | null {
   const trimmed = raw.trim()
   if (!/^\d{4,12}$/.test(trimmed)) return null
   const sku = Number(trimmed)
   return Number.isSafeInteger(sku) && sku > 0 ? sku : null
+}
+
+function parsePercent(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!/^\d{1,3}$/.test(trimmed)) return null
+  const percent = Number(trimmed)
+  return percent >= 0 && percent <= 100 ? percent : null
+}
+
+function parsePositiveNumber(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!/^\d+(?:\.\d+)?$/.test(trimmed)) return null
+  const value = Number(trimmed)
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
+function parseVehicleLabel(raw: string): string | null {
+  try {
+    const vehicleLabel = decodeURIComponent(raw)
+    return vehicleLabel.trim().length > 0 ? vehicleLabel : null
+  } catch {
+    return null
+  }
+}
+
+function isFitRecommendation(value: string): value is FitRecommendation {
+  return FIT_RECOMMENDATIONS.includes(value as FitRecommendation)
 }
 
 function parseToken(keyword: string, body: string): RichSegment | null {
@@ -67,6 +113,55 @@ function parseToken(keyword: string, body: string): RichSegment | null {
       return bare.length > 0 && !bare.includes('=')
         ? { kind: 'search', query: bare }
         : null
+    }
+    case 'FitVerdict': {
+      const parts = body.split(',')
+      if (parts.length !== 9) return null
+      const [
+        rawSku,
+        rawPercentAny,
+        rawRecommended,
+        rawVehicleLabel,
+        rawEstimated,
+        rawBoxH,
+        rawBoxD,
+        rawOpenW,
+        rawOpenH,
+      ] = parts
+      const sku = parseSku(rawSku)
+      const percentAny = parsePercent(rawPercentAny)
+      const recommended = rawRecommended.trim()
+      const vehicleLabel = parseVehicleLabel(rawVehicleLabel)
+      const estimated = rawEstimated.trim()
+      const boxH = parsePositiveNumber(rawBoxH)
+      const boxD = parsePositiveNumber(rawBoxD)
+      const openW = parsePositiveNumber(rawOpenW)
+      const openH = parsePositiveNumber(rawOpenH)
+      if (
+        sku === null ||
+        percentAny === null ||
+        !isFitRecommendation(recommended) ||
+        vehicleLabel === null ||
+        (estimated !== '0' && estimated !== '1') ||
+        boxH === null ||
+        boxD === null ||
+        openW === null ||
+        openH === null
+      ) {
+        return null
+      }
+      return {
+        kind: 'fit-verdict',
+        sku,
+        percentAny,
+        recommended,
+        vehicleLabel,
+        estimated: estimated === '1',
+        boxH,
+        boxD,
+        openW,
+        openH,
+      }
     }
     default:
       return null
@@ -110,7 +205,7 @@ export function collectCardSkus(segments: RichSegment[]): number[] {
   return skus
 }
 
-const KEYWORDS = ['Product', 'Compare', 'ShowSearch']
+const KEYWORDS = ['Product', 'Compare', 'ShowSearch', 'FitVerdict']
 
 /**
  * Streaming draft helper: if the text ends mid-token ("…[Product(80410"),

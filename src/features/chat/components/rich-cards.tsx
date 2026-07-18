@@ -3,6 +3,7 @@ import { ChevronRight, ImageOff, Search } from 'lucide-react'
 import { AddToCartButton } from '#/features/cart/add-to-cart-button'
 import { formatPrice } from '#/lib/format-price'
 import type { BestBuyProduct } from '#/server/bestbuy/types'
+import type { FitVerdictSegment } from '../rich-cards'
 
 /**
  * Rich chat cards (IMA-7) — what [Product(SKU)], [Compare(...)], and
@@ -73,6 +74,167 @@ export function ProductRichCard({ product }: { product: BestBuyProduct }) {
       </div>
     </div>
   )
+}
+
+export function FitVerdictCard({
+  verdict,
+}: {
+  verdict: FitVerdictSegment
+}) {
+  const presentation = fitVerdictPresentation(verdict.percentAny)
+
+  return (
+    <div className="card-glint relative overflow-hidden rounded-xl bg-surface p-3 transition-transform duration-100 active:scale-[0.99]">
+      <Link
+        to="/product/$sku"
+        params={{ sku: String(verdict.sku) }}
+        className="absolute inset-0 rounded-xl"
+      >
+        <span className="sr-only">View product details</span>
+      </Link>
+
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="aisle-label">Vehicle fit</p>
+          <p className="mt-1 text-heading font-bold">{presentation.headline}</p>
+        </div>
+        {verdict.estimated && (
+          <span className="shrink-0 rounded-full bg-raised px-2 py-0.5 text-micro font-bold text-text-muted">
+            estimated specs
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-[auto_1fr] items-center gap-x-3">
+        <p className={`tabular text-display font-extrabold tracking-tight ${presentation.textClass}`}>
+          {verdict.percentAny}%
+        </p>
+        <div className="min-w-0">
+          <p className="truncate text-body-sm font-semibold">{verdict.vehicleLabel}</p>
+          <span
+            className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-micro font-bold ${presentation.badgeClass}`}
+          >
+            {orientationLabel(verdict.recommended)}
+          </span>
+        </div>
+      </div>
+
+      <FitCrossSection verdict={verdict} toneClass={presentation.textClass} />
+
+      <p className="mt-2.5 text-caption leading-relaxed text-text-muted">
+        Assumes rear seats folded. Panels should ride upright; flat transport
+        risks damage.
+      </p>
+    </div>
+  )
+}
+
+function fitVerdictPresentation(percentAny: number) {
+  if (percentAny >= 85) {
+    return {
+      headline: 'Should fit',
+      textClass: 'text-ok',
+      badgeClass: 'bg-ok-subtle text-ok',
+    }
+  }
+  if (percentAny >= 15) {
+    return {
+      headline: 'Tight, measure first',
+      textClass: 'text-action',
+      badgeClass: 'bg-action-subtle text-action',
+    }
+  }
+  return {
+    headline: 'Very unlikely to fit',
+    textClass: 'text-danger',
+    badgeClass: 'bg-danger-subtle text-danger',
+  }
+}
+
+function orientationLabel(recommended: FitVerdictSegment['recommended']): string {
+  switch (recommended) {
+    case 'upright':
+      return 'loads upright'
+    case 'tilted':
+      return 'loads tilted'
+    case 'flat':
+      return 'flat only, not recommended'
+    case 'none':
+      return 'none'
+  }
+}
+
+function FitCrossSection({
+  verdict,
+  toneClass,
+}: {
+  verdict: FitVerdictSegment
+  toneClass: string
+}) {
+  const rotation = verdict.recommended === 'tilted' ? 15 : 0
+  const radians = (rotation * Math.PI) / 180
+  const boxWidth =
+    rotation === 0
+      ? verdict.boxD
+      : verdict.boxD * Math.cos(radians) + verdict.boxH * Math.sin(radians)
+  const boxHeight =
+    rotation === 0
+      ? verdict.boxH
+      : verdict.boxD * Math.sin(radians) + verdict.boxH * Math.cos(radians)
+  const scale = Math.min(
+    172 / Math.max(verdict.openW, boxWidth),
+    82 / Math.max(verdict.openH, boxHeight),
+  )
+  const centerX = 100
+  const centerY = 52
+  const openingWidth = verdict.openW * scale
+  const openingHeight = verdict.openH * scale
+  const renderedBoxWidth = verdict.boxD * scale
+  const renderedBoxHeight = verdict.boxH * scale
+
+  return (
+    <div className="mt-3 rounded-lg bg-raised px-2 py-1.5">
+      <svg
+        viewBox="0 0 200 132"
+        className="h-32 w-full"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect
+          x={centerX - openingWidth / 2}
+          y={centerY - openingHeight / 2}
+          width={openingWidth}
+          height={openingHeight}
+          rx="3"
+          fill="none"
+          className="stroke-line-strong"
+          strokeWidth="2"
+        />
+        <rect
+          x={centerX - renderedBoxWidth / 2}
+          y={centerY - renderedBoxHeight / 2}
+          width={renderedBoxWidth}
+          height={renderedBoxHeight}
+          rx="2"
+          transform={
+            rotation === 0 ? undefined : `rotate(${rotation} ${centerX} ${centerY})`
+          }
+          className={`fill-current/20 stroke-current ${toneClass}`}
+          strokeWidth="2"
+        />
+        <text x="100" y="112" textAnchor="middle" className="fill-text-faint text-[9px]">
+          Opening {formatDimension(verdict.openW)} × {formatDimension(verdict.openH)} in
+        </text>
+        <text x="100" y="125" textAnchor="middle" className="fill-text-faint text-[9px]">
+          Box {formatDimension(verdict.boxD)} × {formatDimension(verdict.boxH)} in
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+function formatDimension(value: number): string {
+  return value.toFixed(1)
 }
 
 function PriceBlock({ product }: { product: BestBuyProduct }) {

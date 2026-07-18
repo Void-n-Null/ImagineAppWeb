@@ -7,7 +7,9 @@ import {
   viewCartTool,
 } from './cart-tools'
 import { compareProductsTool } from './compare-products-tool'
+import { computeTvFitTool } from './compute-tv-fit-tool'
 import { getTimeTool } from './get-time-tool'
+import { identifyVehicleTool } from './identify-vehicle-tool'
 import { requestScanTool } from './request-scan-tool'
 import { searchProductsTool } from './search-products-tool'
 import { storeAvailabilityTool } from './store-availability-tool'
@@ -21,8 +23,10 @@ export {
   viewCartTool,
 } from './cart-tools'
 export { compareProductsTool } from './compare-products-tool'
+export { computeTvFitTool } from './compute-tv-fit-tool'
 export { formatAttachmentContext, formatProductContext } from './format'
 export { getTimeTool } from './get-time-tool'
+export { identifyVehicleTool } from './identify-vehicle-tool'
 export { requestScanTool } from './request-scan-tool'
 export { searchProductsTool } from './search-products-tool'
 export { storeAvailabilityTool } from './store-availability-tool'
@@ -33,6 +37,8 @@ export function buildDefaultToolRegistry(): ToolRegistry {
   return new ToolRegistry([
     searchProductsTool,
     analyzeProductTool,
+    identifyVehicleTool,
+    computeTvFitTool,
     compareProductsTool,
     webSearchTool,
     requestScanTool,

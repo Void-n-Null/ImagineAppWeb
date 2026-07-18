@@ -66,8 +66,30 @@ describe('parseRichSegments', () => {
     ])
   })
 
+  it('parses fit verdict tokens with decoded labels and drawing dimensions', () => {
+    expect(
+      parseRichSegments(
+        '[FitVerdict(8041012,87,tilted,2019%20Honda%20CR-V,1,38.0,9.0,42.0,31.0)]',
+      ),
+    ).toEqual([
+      {
+        kind: 'fit-verdict',
+        sku: 8041012,
+        percentAny: 87,
+        recommended: 'tilted',
+        vehicleLabel: '2019 Honda CR-V',
+        estimated: true,
+        boxH: 38,
+        boxD: 9,
+        openW: 42,
+        openH: 31,
+      },
+    ])
+  })
+
   it('keeps malformed tokens visible as plain text', () => {
-    const malformed = 'See [Product(not-a-sku)] and [ShowSearch(on_sale=true)]'
+    const malformed =
+      'See [Product(not-a-sku)] and [ShowSearch(on_sale=true)] and [FitVerdict(8041012,101,upright,2019%20Honda,0,38,9,42,31)]'
     expect(parseRichSegments(malformed)).toEqual([
       { kind: 'text', text: malformed },
     ])

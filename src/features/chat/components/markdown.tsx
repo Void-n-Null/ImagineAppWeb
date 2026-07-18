@@ -11,6 +11,7 @@ import {
 import { useCardProducts } from '../use-card-products'
 import {
   CompareRichCard,
+  FitVerdictCard,
   MissingProductNote,
   ProductCardSkeleton,
   ProductRichCard,
@@ -93,6 +94,8 @@ function Segment({
     }
     case 'search':
       return <SearchRichCard query={segment.query} />
+    case 'fit-verdict':
+      return <FitVerdictCard verdict={segment} />
   }
 }
 
