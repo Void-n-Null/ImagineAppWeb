@@ -12,9 +12,12 @@ import { capture } from '#/features/analytics/analytics'
 export function ProductSearchBar({
   initialQuery = '',
   autoFocus = false,
+  onSearch,
 }: {
   initialQuery?: string
   autoFocus?: boolean
+  /** Keeps the search local when a picker needs results inline. */
+  onSearch?: (query: string) => void
 }) {
   const navigate = useNavigate()
   const [value, setValue] = useState(initialQuery)
@@ -36,7 +39,8 @@ export function ProductSearchBar({
             query: q,
           })
           inputRef.current?.blur()
-          void navigate({ to: '/search', search: { q } })
+          if (onSearch) onSearch(q)
+          else void navigate({ to: '/search', search: { q } })
         }}
       >
         <div className="relative">

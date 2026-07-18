@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppWillitfitRouteImport } from './routes/_app.willitfit'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppSearchRouteImport } from './routes/_app.search'
 import { Route as AppScanRouteImport } from './routes/_app.scan'
@@ -32,6 +33,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWillitfitRoute = AppWillitfitRouteImport.update({
+  id: '/willitfit',
+  path: '/willitfit',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/scan': typeof AppScanRoute
   '/search': typeof AppSearchRoute
   '/settings': typeof AppSettingsRoute
+  '/willitfit': typeof AppWillitfitRoute
   '/models/$': typeof AppModelsSplatRoute
   '/models/guide': typeof AppModelsGuideRoute
   '/product/$sku': typeof AppProductSkuRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/scan': typeof AppScanRoute
   '/search': typeof AppSearchRoute
   '/settings': typeof AppSettingsRoute
+  '/willitfit': typeof AppWillitfitRoute
   '/': typeof AppIndexRoute
   '/models/$': typeof AppModelsSplatRoute
   '/models/guide': typeof AppModelsGuideRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/_app/scan': typeof AppScanRoute
   '/_app/search': typeof AppSearchRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/willitfit': typeof AppWillitfitRoute
   '/_app/': typeof AppIndexRoute
   '/_app/models/$': typeof AppModelsSplatRoute
   '/_app/models/guide': typeof AppModelsGuideRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/search'
     | '/settings'
+    | '/willitfit'
     | '/models/$'
     | '/models/guide'
     | '/product/$sku'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/search'
     | '/settings'
+    | '/willitfit'
     | '/'
     | '/models/$'
     | '/models/guide'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/_app/scan'
     | '/_app/search'
     | '/_app/settings'
+    | '/_app/willitfit'
     | '/_app/'
     | '/_app/models/$'
     | '/_app/models/guide'
@@ -221,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/willitfit': {
+      id: '/_app/willitfit'
+      path: '/willitfit'
+      fullPath: '/willitfit'
+      preLoaderRoute: typeof AppWillitfitRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings': {
@@ -326,6 +345,7 @@ interface AppRouteChildren {
   AppScanRoute: typeof AppScanRoute
   AppSearchRoute: typeof AppSearchRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppWillitfitRoute: typeof AppWillitfitRoute
   AppIndexRoute: typeof AppIndexRoute
   AppModelsSplatRoute: typeof AppModelsSplatRoute
   AppModelsGuideRoute: typeof AppModelsGuideRoute
@@ -342,6 +362,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppScanRoute: AppScanRoute,
   AppSearchRoute: AppSearchRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppWillitfitRoute: AppWillitfitRoute,
   AppIndexRoute: AppIndexRoute,
   AppModelsSplatRoute: AppModelsSplatRoute,
   AppModelsGuideRoute: AppModelsGuideRoute,

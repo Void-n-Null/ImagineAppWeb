@@ -342,6 +342,193 @@ body {
   animation: shimmer-slide 1.8s linear infinite;
 }
 
+/* ── Will It Fit (IMA-51) ─────────────────────────────────────────────── */
+
+.will-fit-page {
+  --will-fit-gold: color-mix(in srgb, var(--tag) 84%, var(--tag-ink));
+  --will-fit-gold-deep: color-mix(in srgb, var(--tag-ink) 78%, var(--surface));
+}
+
+.will-fit-marquee {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--will-fit-gold) 42%, var(--line));
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.will-fit-bulbs {
+  position: absolute;
+  inset: 0.55rem 0.75rem;
+  pointer-events: none;
+}
+
+.will-fit-bulbs::before,
+.will-fit-bulbs::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 4px;
+  content: '';
+  background-image: radial-gradient(
+    circle,
+    var(--will-fit-gold) 0 1.65px,
+    transparent 2.35px
+  );
+  background-size: 13px 4px;
+  animation: will-fit-bulbs 900ms steps(2, end) infinite alternate;
+}
+
+.will-fit-bulbs::before {
+  top: 0;
+}
+
+.will-fit-bulbs::after {
+  bottom: 0;
+}
+
+@keyframes will-fit-bulbs {
+  from {
+    opacity: 0.38;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.will-fit-kicker,
+.will-fit-section-title {
+  font-size: var(--text-micro);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.will-fit-kicker {
+  color: var(--will-fit-gold);
+}
+
+.will-fit-section-title {
+  color: var(--text-muted);
+}
+
+.will-fit-title {
+  margin: 0.15rem 0 0;
+  color: var(--will-fit-gold);
+  font-size: clamp(2.8rem, 15vw, 4.5rem);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.085em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+  transform-origin: left center;
+  text-shadow:
+    2px 2px 0 var(--will-fit-gold-deep),
+    4px 4px 0 color-mix(in srgb, var(--will-fit-gold-deep) 80%, transparent);
+}
+
+.will-fit-contender {
+  border: 1px solid color-mix(in srgb, var(--will-fit-gold) 22%, var(--line));
+}
+
+.will-fit-action {
+  box-shadow: 3px 4px 0 color-mix(in srgb, var(--action-ink) 65%, var(--bg));
+}
+
+.will-fit-tone-gold {
+  color: var(--will-fit-gold);
+}
+
+.will-fit-reveal--fits::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: color-mix(in srgb, var(--will-fit-gold) 14%, transparent);
+  animation: will-fit-flash 480ms var(--ease-out-expo) both;
+}
+
+@keyframes will-fit-flash {
+  from {
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+
+.will-fit-reveal-headline {
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.will-fit-particle-burst {
+  position: absolute;
+  top: 5.5rem;
+  left: 50%;
+  z-index: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.will-fit-particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--will-fit-gold);
+  animation: will-fit-particle 700ms var(--ease-out-expo) both;
+}
+
+@keyframes will-fit-particle {
+  from {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.2);
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--will-fit-x), var(--will-fit-y)) scale(0.5);
+  }
+}
+
+.will-fit-buzzer {
+  animation: will-fit-buzzer 280ms linear 1;
+}
+
+@keyframes will-fit-buzzer {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .will-fit-bulbs,
+  .will-fit-bulbs::before,
+  .will-fit-bulbs::after,
+  .will-fit-reveal--fits::before,
+  .will-fit-buzzer {
+    animation: none;
+  }
+
+  .will-fit-particle-burst {
+    display: none;
+  }
+}
+
 @keyframes shimmer-slide {
   from {
     background-position: 200% 0;

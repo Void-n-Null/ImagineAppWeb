@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router'
 import {
   ChevronLeft,
+  CarFront,
   ExternalLink,
   History,
   ImageOff,
@@ -166,6 +167,7 @@ function ProductBody({ product }: { product: BestBuyProduct }) {
     product.manufacturer,
     product.categoryPath.at(-1)?.name,
   ].filter(Boolean)
+  const canCheckVehicleFit = isPlausiblyTv(product)
 
   // "Just viewed" history (IMA-29) — record once per product landing.
   useEffect(() => {
@@ -266,6 +268,20 @@ function ProductBody({ product }: { product: BestBuyProduct }) {
               />
               Ask assistant
             </Link>
+            {canCheckVehicleFit && (
+              <Link
+                to="/willitfit"
+                search={{ sku: product.sku }}
+                className="col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-raised text-body-sm font-bold text-text transition-transform duration-100 active:scale-[0.98]"
+              >
+                <CarFront
+                  size={15}
+                  aria-hidden="true"
+                  className="text-action"
+                />
+                Will it fit your car?
+              </Link>
+            )}
           </div>
         </div>
         {/* Sticky-bar sentinel: the bar shows once this scrolls off the top. */}
@@ -319,6 +335,10 @@ function ProductBody({ product }: { product: BestBuyProduct }) {
       )}
     </div>
   )
+}
+
+function isPlausiblyTv(product: BestBuyProduct): boolean {
+  return product.categoryPath.some((category) => category.id === 'abcat0101000')
 }
 
 /** Compare-tray toggle (IMA-29): solid tint when queued, like every other

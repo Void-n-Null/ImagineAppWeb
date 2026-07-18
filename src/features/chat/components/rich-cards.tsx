@@ -76,11 +76,7 @@ export function ProductRichCard({ product }: { product: BestBuyProduct }) {
   )
 }
 
-export function FitVerdictCard({
-  verdict,
-}: {
-  verdict: FitVerdictSegment
-}) {
+export function FitVerdictCard({ verdict }: { verdict: FitVerdictSegment }) {
   const presentation = fitVerdictPresentation(verdict.percentAny)
 
   return (
@@ -106,11 +102,15 @@ export function FitVerdictCard({
       </div>
 
       <div className="mt-3 grid grid-cols-[auto_1fr] items-center gap-x-3">
-        <p className={`tabular text-display font-extrabold tracking-tight ${presentation.textClass}`}>
+        <p
+          className={`tabular text-display font-extrabold tracking-tight ${presentation.textClass}`}
+        >
           {verdict.percentAny}%
         </p>
         <div className="min-w-0">
-          <p className="truncate text-body-sm font-semibold">{verdict.vehicleLabel}</p>
+          <p className="truncate text-body-sm font-semibold">
+            {verdict.vehicleLabel}
+          </p>
           <span
             className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-micro font-bold ${presentation.badgeClass}`}
           >
@@ -151,7 +151,9 @@ function fitVerdictPresentation(percentAny: number) {
   }
 }
 
-function orientationLabel(recommended: FitVerdictSegment['recommended']): string {
+export function orientationLabel(
+  recommended: FitVerdictSegment['recommended'],
+): string {
   switch (recommended) {
     case 'upright':
       return 'loads upright'
@@ -164,7 +166,7 @@ function orientationLabel(recommended: FitVerdictSegment['recommended']): string
   }
 }
 
-function FitCrossSection({
+export function FitCrossSection({
   verdict,
   toneClass,
 }: {
@@ -217,16 +219,30 @@ function FitCrossSection({
           height={renderedBoxHeight}
           rx="2"
           transform={
-            rotation === 0 ? undefined : `rotate(${rotation} ${centerX} ${centerY})`
+            rotation === 0
+              ? undefined
+              : `rotate(${rotation} ${centerX} ${centerY})`
           }
           className={`fill-current/20 stroke-current ${toneClass}`}
           strokeWidth="2"
         />
-        <text x="100" y="112" textAnchor="middle" className="fill-text-faint text-[9px]">
-          Opening {formatDimension(verdict.openW)} × {formatDimension(verdict.openH)} in
+        <text
+          x="100"
+          y="112"
+          textAnchor="middle"
+          className="fill-text-faint text-[9px]"
+        >
+          Opening {formatDimension(verdict.openW)} ×{' '}
+          {formatDimension(verdict.openH)} in
         </text>
-        <text x="100" y="125" textAnchor="middle" className="fill-text-faint text-[9px]">
-          Box {formatDimension(verdict.boxD)} × {formatDimension(verdict.boxH)} in
+        <text
+          x="100"
+          y="125"
+          textAnchor="middle"
+          className="fill-text-faint text-[9px]"
+        >
+          Box {formatDimension(verdict.boxD)} × {formatDimension(verdict.boxH)}{' '}
+          in
         </text>
       </svg>
     </div>
