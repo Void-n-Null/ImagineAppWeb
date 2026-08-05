@@ -1,0 +1,1 @@
+CREATE INDEX "threads_updated_idx" ON "threads" USING btree ("updated_at");

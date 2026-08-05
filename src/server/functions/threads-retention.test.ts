@@ -2,9 +2,12 @@ import { PgDialect } from 'drizzle-orm/pg-core'
 import { describe, expect, it } from 'vitest'
 import { THREAD_RETENTION_MS } from '#/lib/retention'
 import {
+  purgeAllExpiredThreadsSql,
   purgeExpiredThreadsSql,
   RETENTION_SECONDS,
   retentionCutoff,
+  SCHEDULED_PURGE_SECONDS,
+  scheduledPurgeCutoff,
 } from './threads'
 
 /**
@@ -31,6 +34,16 @@ describe('retentionCutoff (read filter)', () => {
   })
 })
 
+describe('scheduledPurgeCutoff', () => {
+  it('leaves enough margin for a daily Hobby cron to delete before 72h', () => {
+    const { sql, params } = dialect.sqlToQuery(scheduledPurgeCutoff())
+    expect(sql).toBe('now() - make_interval(secs => $1)')
+    expect(params).toEqual([SCHEDULED_PURGE_SECONDS])
+    expect(SCHEDULED_PURGE_SECONDS).toBe(169_200)
+    expect(RETENTION_SECONDS - SCHEDULED_PURGE_SECONDS).toBe(90_000)
+  })
+})
+
 describe('purgeExpiredThreadsSql (lazy purge)', () => {
   it('DELETEs only this user’s rows at/past the 72h cutoff', () => {
     const { sql, params } = dialect.sqlToQuery(purgeExpiredThreadsSql(42))
@@ -44,5 +57,21 @@ describe('purgeExpiredThreadsSql (lazy purge)', () => {
     expect(flat).toContain('updated_at <= now() - make_interval(secs => $2)')
     // ...and the params in order: userId, then the window seconds.
     expect(params).toEqual([42, RETENTION_SECONDS])
+  })
+})
+
+describe('purgeAllExpiredThreadsSql (scheduled purge)', () => {
+  it('globally deletes rows at the conservative scheduled cutoff', () => {
+    const { sql, params } = dialect.sqlToQuery(purgeAllExpiredThreadsSql())
+    const flat = sql.replace(/\s+/g, ' ').trim()
+
+    expect(flat).toContain('WITH deleted AS ( DELETE FROM threads')
+    expect(flat).not.toContain('user_id')
+    expect(flat).toContain('updated_at <= now() - make_interval(secs => $1)')
+    expect(flat).toContain('RETURNING 1')
+    expect(flat).toContain(
+      'SELECT count(*)::integer AS deleted_count FROM deleted',
+    )
+    expect(params).toEqual([SCHEDULED_PURGE_SECONDS])
   })
 })

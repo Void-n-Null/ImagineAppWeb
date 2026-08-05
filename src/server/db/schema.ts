@@ -85,6 +85,8 @@ export const threads = pgTable(
   (t) => [
     // Drives listThreads: every list is scoped to one user, newest first.
     index('threads_user_updated_idx').on(t.userId, t.updatedAt.desc()),
+    // Drives the global scheduled retention purge without scanning by user.
+    index('threads_updated_idx').on(t.updatedAt),
   ],
 )
 

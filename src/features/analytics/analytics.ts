@@ -20,6 +20,9 @@ export const posthogOptions = {
   ui_host: 'https://us.posthog.com',
   defaults: '2026-05-30',
   capture_exceptions: true,
+  // Chat is the primary surface and can contain personal information. Keep
+  // aggregate events, but never transmit reconstructed screens to PostHog.
+  disable_session_recording: true,
 } satisfies Partial<PostHogConfig>
 
 let warnedDisabled = false

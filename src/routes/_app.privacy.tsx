@@ -12,7 +12,7 @@ export const Route = createFileRoute('/_app/privacy')({
   component: PrivacyPage,
 })
 
-const EFFECTIVE_DATE = 'July 14, 2026'
+const EFFECTIVE_DATE = 'August 5, 2026'
 
 function Section({
   number,
@@ -82,8 +82,8 @@ function PrivacyPage() {
           and processed as described in Section 4. Conversations are stored on
           your device. If you are signed in, conversations are additionally
           stored on our servers to allow you to resume them across devices, and
-          are deleted from our servers approximately seventy-two (72) hours
-          after their last activity.
+          are deleted from our servers within seventy-two (72) hours after their
+          last activity.
         </p>
         <p>
           <strong className="text-text">2.3 Usage information.</strong> We use
@@ -93,14 +93,10 @@ function PrivacyPage() {
           type, operating system, screen dimensions, and approximate, city-level
           location derived from your IP address at the time of receipt. We have
           configured our analytics service to discard full IP addresses rather
-          than retain them. We also collect session replays, which are
-          reconstructions of individual visits showing on-screen activity. Text
-          you type into input fields is masked in session replays by default;
-          content displayed on screen, including conversation text rendered in
-          the interface, may be visible. If you are signed in, usage information
-          is associated with your account identifier and email address;
-          otherwise it is associated with a random identifier stored in your
-          browser.
+          than retain them. If you are signed in, usage information is
+          associated with your account identifier and email address; otherwise
+          it is associated with a random identifier stored in your browser. We
+          do not collect session replays.
         </p>
         <p>
           <strong className="text-text">
@@ -184,8 +180,7 @@ function PrivacyPage() {
           <li>Clerk, Inc.: authentication and account management;</li>
           <li>Google LLC: sign-in identity provider;</li>
           <li>
-            PostHog, Inc.: usage analytics and session replay, processed in the
-            United States;
+            PostHog, Inc.: usage analytics processed in the United States;
           </li>
           <li>
             OpenRouter, Inc. and the model provider you select: assistant
@@ -221,13 +216,10 @@ function PrivacyPage() {
             are deleted upon verified request;
           </li>
           <li>
-            server-side conversation records are deleted approximately
-            seventy-two (72) hours after last activity;
+            server-side conversation records are deleted within seventy-two (72)
+            hours after last activity;
           </li>
-          <li>
-            analytics events are retained for up to one (1) year, and session
-            replays for up to thirty (30) days;
-          </li>
+          <li>analytics events are retained for up to one (1) year;</li>
           <li>
             information stored on your device remains until you clear your
             browser's site data.

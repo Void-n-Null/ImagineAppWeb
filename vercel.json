@@ -8,5 +8,11 @@
       "source": "/ph/:path(.*)",
       "destination": "https://us.i.posthog.com/:path"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/threads-retention",
+      "schedule": "0 0 * * *"
+    }
   ]
 }

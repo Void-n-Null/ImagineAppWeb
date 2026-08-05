@@ -21,6 +21,7 @@ import { Route as AppChatRouteImport } from './routes/_app.chat'
 import { Route as AppCartRouteImport } from './routes/_app.cart'
 import { Route as AppBestbuybenchRouteImport } from './routes/_app.bestbuybench'
 import { Route as AppModelsIndexRouteImport } from './routes/_app.models.index'
+import { Route as ApiCronThreadsRetentionRouteImport } from './routes/api.cron.threads-retention'
 import { Route as ApiAgentTurnRouteImport } from './routes/api.agent.turn'
 import { Route as AppProductSkuRouteImport } from './routes/_app.product.$sku'
 import { Route as AppModelsGuideRouteImport } from './routes/_app.models.guide'
@@ -85,6 +86,11 @@ const AppModelsIndexRoute = AppModelsIndexRouteImport.update({
   path: '/models/',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiCronThreadsRetentionRoute = ApiCronThreadsRetentionRouteImport.update({
+  id: '/api/cron/threads-retention',
+  path: '/api/cron/threads-retention',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentTurnRoute = ApiAgentTurnRouteImport.update({
   id: '/api/agent/turn',
   path: '/api/agent/turn',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/models/guide': typeof AppModelsGuideRoute
   '/product/$sku': typeof AppProductSkuRoute
   '/api/agent/turn': typeof ApiAgentTurnRoute
+  '/api/cron/threads-retention': typeof ApiCronThreadsRetentionRoute
   '/models/': typeof AppModelsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/models/guide': typeof AppModelsGuideRoute
   '/product/$sku': typeof AppProductSkuRoute
   '/api/agent/turn': typeof ApiAgentTurnRoute
+  '/api/cron/threads-retention': typeof ApiCronThreadsRetentionRoute
   '/models': typeof AppModelsIndexRoute
 }
 export interface FileRoutesById {
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_app/models/guide': typeof AppModelsGuideRoute
   '/_app/product/$sku': typeof AppProductSkuRoute
   '/api/agent/turn': typeof ApiAgentTurnRoute
+  '/api/cron/threads-retention': typeof ApiCronThreadsRetentionRoute
   '/_app/models/': typeof AppModelsIndexRoute
 }
 export interface FileRouteTypes {
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/models/guide'
     | '/product/$sku'
     | '/api/agent/turn'
+    | '/api/cron/threads-retention'
     | '/models/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/models/guide'
     | '/product/$sku'
     | '/api/agent/turn'
+    | '/api/cron/threads-retention'
     | '/models'
   id:
     | '__root__'
@@ -211,12 +222,14 @@ export interface FileRouteTypes {
     | '/_app/models/guide'
     | '/_app/product/$sku'
     | '/api/agent/turn'
+    | '/api/cron/threads-retention'
     | '/_app/models/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   ApiAgentTurnRoute: typeof ApiAgentTurnRoute
+  ApiCronThreadsRetentionRoute: typeof ApiCronThreadsRetentionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModelsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/cron/threads-retention': {
+      id: '/api/cron/threads-retention'
+      path: '/api/cron/threads-retention'
+      fullPath: '/api/cron/threads-retention'
+      preLoaderRoute: typeof ApiCronThreadsRetentionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/turn': {
       id: '/api/agent/turn'
       path: '/api/agent/turn'
@@ -375,6 +395,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   ApiAgentTurnRoute: ApiAgentTurnRoute,
+  ApiCronThreadsRetentionRoute: ApiCronThreadsRetentionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

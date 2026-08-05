@@ -76,6 +76,13 @@ export type DeleteThreadResult =
 export const RETENTION_SECONDS = THREAD_RETENTION_MS / 1000
 
 /**
+ * Vercel Hobby cron runs once per day and may fire anywhere within its target
+ * hour. Purging at 47h leaves just under 25h of scheduler margin, so a row is
+ * physically removed before it can cross the 72h API-content storage limit.
+ */
+export const SCHEDULED_PURGE_SECONDS = 47 * 60 * 60
+
+/**
  * The cutoff instant `now() - 72h`. One expression reused by both the purge
  * DELETE and every read filter so a purge that fails (or races) can never leak
  * an expired thread — the read WHERE excludes it regardless.
@@ -90,6 +97,10 @@ export function retentionCutoff(): SQL {
   return sql`now() - make_interval(secs => ${RETENTION_SECONDS})`
 }
 
+export function scheduledPurgeCutoff(): SQL {
+  return sql`now() - make_interval(secs => ${SCHEDULED_PURGE_SECONDS})`
+}
+
 /**
  * The lazy-purge DELETE for one user, as a pure SQL fragment (exported so the
  * exact statement — table, user pin, `<=` cutoff — is unit-testable via
@@ -101,6 +112,25 @@ export function purgeExpiredThreadsSql(userId: number): SQL {
     DELETE FROM threads
     WHERE user_id = ${userId} AND updated_at <= ${retentionCutoff()}
   `
+}
+
+/** Global scheduled purge. The cron route is separately authenticated. */
+export function purgeAllExpiredThreadsSql(): SQL {
+  return sql`
+    WITH deleted AS (
+      DELETE FROM threads
+      WHERE updated_at <= ${scheduledPurgeCutoff()}
+      RETURNING 1
+    )
+    SELECT count(*)::integer AS deleted_count FROM deleted
+  `
+}
+
+export async function purgeAllExpiredThreads(): Promise<number> {
+  const result = await getDb().execute<{ deleted_count: number }>(
+    purgeAllExpiredThreadsSql(),
+  )
+  return Number(result.rows[0]?.deleted_count ?? 0)
 }
 
 /**
