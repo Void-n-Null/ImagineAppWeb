@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "sync-tesseract": "bun scripts/sync-tesseract-assets.ts",
+    "credits": "bun scripts/credits.ts",
     "prebuild": "bun scripts/sync-tesseract-assets.ts",
     "build": "vite build",
     "preview": "vite preview",
