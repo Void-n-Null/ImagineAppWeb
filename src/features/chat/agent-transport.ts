@@ -24,6 +24,10 @@ import {
   type TurnRequestBody,
 } from '#/features/agent'
 import type { CartItem } from '#/features/cart/cart-store'
+import {
+  inspectUntrustedTurnRequest,
+  sensitiveContentBlockMessage,
+} from './content-safety'
 
 /** The turn endpoint. */
 export const TURN_ENDPOINT = '/api/agent/turn'
@@ -36,7 +40,7 @@ export const TURN_ENDPOINT = '/api/agent/turn'
 export const MAX_CLIENT_ACTION_ROUNDS = 3
 
 export interface ChatNotice {
-  kind: 'error' | 'limit'
+  kind: 'error' | 'limit' | 'sensitive'
   message: string
   authExpired: boolean
 }
@@ -50,6 +54,7 @@ export interface ChatNotice {
 export interface TurnSink {
   getTranscript(): ChatMessage[]
   append(message: ChatMessage): void
+  replaceTranscript(messages: ChatMessage[]): void
   setActivity(label: string | null): void
   setDraft(
     update: (
@@ -75,9 +80,25 @@ export interface TurnSink {
   fetchImpl?: typeof fetch
 }
 
-/** Build the untrusted turn request body from the current transcript + sink. */
-function buildRequestBody(sink: TurnSink): TurnRequestBody {
-  return {
+function deepFreeze<T>(value: T): T {
+  if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
+    return value
+  }
+  for (const child of Object.values(value)) deepFreeze(child)
+  return Object.freeze(value)
+}
+
+/**
+ * Snapshot and freeze an outbound turn body. The same instance can be screened
+ * before local persistence and sent without rebuilding it later.
+ */
+export function buildTurnRequestBody(body: TurnRequestBody): TurnRequestBody {
+  return deepFreeze(structuredClone(body))
+}
+
+/** Build a fresh body for a later client-action retry. */
+function buildCurrentRequestBody(sink: TurnSink): TurnRequestBody {
+  return buildTurnRequestBody({
     messages: sink.getTranscript(),
     model: sink.model,
     toolsEnabled: sink.toolsEnabled,
@@ -86,7 +107,7 @@ function buildRequestBody(sink: TurnSink): TurnRequestBody {
       iso: new Date().toISOString(),
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
-  }
+  })
 }
 
 /** Map a non-2xx (or bodyless) response to the right notice. */
@@ -106,6 +127,18 @@ async function applyErrorResponse(
     sink.setNotice({
       kind: 'error',
       message: 'Sign in to keep chatting.',
+      authExpired: false,
+    })
+    return
+  }
+
+  if (response.status === 400 && payload.error === 'sensitive_content') {
+    sink.setNotice({
+      kind: 'sensitive',
+      message:
+        typeof payload.message === 'string'
+          ? payload.message
+          : 'Blocked before upload. Use public product details only.',
       authExpired: false,
     })
     return
@@ -157,12 +190,24 @@ async function applyErrorResponse(
 export async function runTurn(
   sink: TurnSink,
   signal: AbortSignal,
+  requestBody?: TurnRequestBody,
 ): Promise<ToolCallRequest[]> {
+  const body = requestBody ?? buildCurrentRequestBody(sink)
+  const findings = inspectUntrustedTurnRequest(body)
+  if (findings.length > 0) {
+    sink.setNotice({
+      kind: 'sensitive',
+      message: sensitiveContentBlockMessage(findings),
+      authExpired: false,
+    })
+    return []
+  }
+
   const doFetch = sink.fetchImpl ?? fetch
   const response = await doFetch(TURN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildRequestBody(sink)),
+    body: JSON.stringify(body),
     signal,
   })
 
@@ -253,13 +298,21 @@ async function runClientAction(
 export async function driveTurns(
   sink: TurnSink,
   signal: AbortSignal,
+  initialBody?: TurnRequestBody,
 ): Promise<void> {
+  let pendingTurnStart: ChatMessage[] | null = null
   try {
+    let requestBody = initialBody
     for (let round = 0; round <= MAX_CLIENT_ACTION_ROUNDS; round++) {
-      const clientActions = await runTurn(sink, signal)
+      const turnStart = [...sink.getTranscript()]
+      const clientActions = await runTurn(sink, signal, requestBody)
+      requestBody = undefined
       if (clientActions.length === 0) return // completed or errored
+      pendingTurnStart = turnStart
 
       if (round === MAX_CLIENT_ACTION_ROUNDS) {
+        sink.replaceTranscript(turnStart)
+        pendingTurnStart = null
         sink.setNotice({
           kind: 'error',
           message:
@@ -271,11 +324,37 @@ export async function driveTurns(
 
       // Answer every pending scan before re-POSTing: the OpenAI protocol needs
       // every tool_call_id in the batch answered before the next completion.
+      const results: ToolResultMessage[] = []
       for (const call of clientActions) {
-        sink.append(await runClientAction(call, sink.host))
+        results.push(await runClientAction(call, sink.host))
       }
+      const retryBody = buildTurnRequestBody({
+        messages: [...sink.getTranscript(), ...results],
+        model: sink.model,
+        toolsEnabled: sink.toolsEnabled,
+        cart: sink.getCart(),
+        clock: {
+          iso: new Date().toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      })
+      const findings = inspectUntrustedTurnRequest(retryBody)
+      if (findings.length > 0) {
+        sink.replaceTranscript(turnStart)
+        pendingTurnStart = null
+        sink.setNotice({
+          kind: 'sensitive',
+          message: sensitiveContentBlockMessage(findings),
+          authExpired: false,
+        })
+        return
+      }
+      for (const result of results) sink.append(result)
+      requestBody = retryBody
+      pendingTurnStart = null
     }
   } catch {
+    if (pendingTurnStart) sink.replaceTranscript(pendingTurnStart)
     if (signal.aborted) return // stop()/unmount — not an error to surface
     // A network drop mid-turn: the stream died before a clean done.
     sink.setNotice({

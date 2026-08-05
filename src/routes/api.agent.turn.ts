@@ -15,6 +15,10 @@ import {
   isModelAllowed,
   POOL_MODEL_ALLOWLIST,
 } from '#/features/agent/model-allowlist'
+import {
+  inspectUntrustedTurnRequest,
+  sensitiveContentBlockMessage,
+} from '#/features/chat/content-safety'
 import { createServerHost } from '#/server/agent/turn-host'
 import { requireUser, UnauthorizedError } from '#/server/auth'
 import { getSpendGate, recordSpend } from '#/server/credits/ledger'
@@ -156,6 +160,20 @@ export const Route = createFileRoute('/api/agent/turn')({
           const message =
             err instanceof Error ? err.message : 'Invalid request body'
           return json({ error: 'invalid_request', message }, 400)
+        }
+
+        const sensitiveFindings = inspectUntrustedTurnRequest(body)
+        if (sensitiveFindings.length > 0) {
+          return json(
+            {
+              error: 'sensitive_content',
+              message: sensitiveContentBlockMessage(sensitiveFindings),
+              categories: [
+                ...new Set(sensitiveFindings.map((finding) => finding.kind)),
+              ],
+            },
+            400,
+          )
         }
 
         // 5. Pool key must be configured.

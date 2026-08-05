@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentHost, ChatMessage, TurnEvent } from '#/features/agent'
+import {
+  type AgentHost,
+  type ChatMessage,
+  type TurnEvent,
+  userMessage,
+} from '#/features/agent'
 import type { CartItem } from '#/features/cart/cart-store'
 import {
+  buildTurnRequestBody,
   type ChatNotice,
   driveTurns,
   MAX_CLIENT_ACTION_ROUNDS,
@@ -50,6 +56,9 @@ function makeSink(overrides: Partial<TurnSink> = {}) {
   const sink: TurnSink = {
     getTranscript: () => transcript,
     append: (m) => transcript.push(m),
+    replaceTranscript: (messages) => {
+      transcript.splice(0, transcript.length, ...messages)
+    },
     setActivity: () => {},
     setDraft: () => {},
     setNotice: (n) => notices.push(n),
@@ -66,6 +75,48 @@ function makeSink(overrides: Partial<TurnSink> = {}) {
 const abort = () => new AbortController().signal
 
 describe('runTurn — SSE application', () => {
+  it('uses the supplied frozen initial body without rebuilding it', async () => {
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        okResponse([{ type: 'done', reason: 'complete' }]),
+    )
+    const fetchImpl = fetchMock as unknown as typeof fetch
+    const { sink, transcript } = makeSink({ fetchImpl })
+    const initialBody = buildTurnRequestBody({
+      messages: [userMessage('Compare public TVs.')],
+      model: sink.model,
+      toolsEnabled: sink.toolsEnabled,
+      cart: [],
+      clock: { iso: '2026-07-07T00:00:00.000Z', timeZone: 'UTC' },
+    })
+    transcript.push(userMessage('Email jane@example.com'))
+
+    await runTurn(sink, abort(), initialBody)
+
+    expect(Object.isFrozen(initialBody)).toBe(true)
+    expect(Object.isFrozen(initialBody.messages)).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const requestInit = fetchMock.mock.calls[0]?.[1]
+    expect(JSON.parse(requestInit?.body as string)).toEqual(initialBody)
+  })
+
+  it('blocks sensitive user content without calling fetch', async () => {
+    const fetchImpl = vi.fn() as unknown as typeof fetch
+    const { sink, transcript, notices } = makeSink({ fetchImpl })
+    transcript.push(userMessage('Email the receipt to jane@example.com'))
+
+    const pending = await runTurn(sink, abort())
+
+    expect(pending).toEqual([])
+    expect(fetchImpl).not.toHaveBeenCalled()
+    expect(notices).toEqual([
+      expect.objectContaining({
+        kind: 'sensitive',
+        message: expect.stringContaining('Remove an email address'),
+      }),
+    ])
+  })
+
   it('appends assistant + tool-result messages from the stream', async () => {
     const fetchImpl = vi.fn(async () =>
       okResponse([
@@ -286,6 +337,46 @@ describe('driveTurns — client-action re-invoke', () => {
     ).toBe(true)
     // And the conversation ends with the model's follow-up.
     expect(transcript.at(-1)).toMatchObject({ role: 'assistant' })
+  })
+
+  it('does not append or retry a sensitive client-action result', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      okResponse([
+        {
+          type: 'assistant-message',
+          message: {
+            id: 'a1',
+            role: 'assistant',
+            content: '',
+            toolCalls: [scanCall],
+            at: 1,
+          },
+        },
+        { type: 'client_action', call: scanCall },
+        { type: 'done', reason: 'client-action' },
+      ]),
+    )
+    const { sink, transcript, notices } = makeSink({
+      fetchImpl: fetchMock as unknown as typeof fetch,
+      host: {
+        ...scanHost(),
+        requestScan: vi.fn(async () => ({
+          status: 'error' as const,
+          message: 'password hunter2',
+        })),
+      },
+    })
+
+    await driveTurns(sink, abort())
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(transcript).toEqual([])
+    expect(notices).toEqual([
+      expect.objectContaining({
+        kind: 'sensitive',
+        message: expect.stringContaining('password'),
+      }),
+    ])
   })
 
   it('guards against runaway scans: stops after MAX_CLIENT_ACTION_ROUNDS', async () => {

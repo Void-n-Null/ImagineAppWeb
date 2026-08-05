@@ -10,10 +10,11 @@ import {
   History,
   MessageCircle,
   Share,
+  ShieldCheck,
   SquarePen,
   SquarePlus,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import { BestBuyAttribution } from '#/features/about/bestbuy-attribution'
 import {
@@ -29,6 +30,7 @@ import { Composer } from '#/features/chat/components/composer'
 import { MessageList } from '#/features/chat/components/messages'
 import { ModelSheet } from '#/features/chat/components/model-sheet'
 import { ScanSheet } from '#/features/chat/components/scan-sheet'
+import { SensitiveContentSheet } from '#/features/chat/components/sensitive-content-sheet'
 import { ThreadDrawer } from '#/features/chat/components/thread-drawer'
 import { generateThreadId } from '#/features/chat/threads/thread-store'
 import {
@@ -168,7 +170,6 @@ function ChatSession({
   const catalog = useModelCatalog()
   const model = catalog.data?.models.find((m) => m.id === selectedId)
   const modelSupportsTools = model?.toolCall !== false
-  const canAttachImages = model?.inputModalities.includes('image') ?? true
 
   // Reconcile local thread cache + user settings with the account once on
   // entering chat (IMA-31). Signed-out/offline is a silent noop inside each.
@@ -212,13 +213,22 @@ function ChatSession({
   })
 
   const handleSend: typeof chat.send = (text, attachments) => {
+    const accepted = chat.send(text, attachments)
+    if (!accepted) return false
     if (chat.transcript.length === 0) onFirstMessage()
     capture('chat_message_sent', {
       message_length: text.length,
       ...(model ? { model: model.id } : {}),
     })
-    chat.send(text, attachments)
+    return true
   }
+
+  const closeSensitiveSheet = useCallback(() => {
+    chat.dismissNotice()
+    requestAnimationFrame(() => {
+      document.getElementById('chat-message')?.focus()
+    })
+  }, [chat.dismissNotice])
 
   const empty = chat.transcript.length === 0
 
@@ -273,7 +283,7 @@ function ChatSession({
               </p>
             )}
 
-            {chat.notice && (
+            {chat.notice && chat.notice.kind !== 'sensitive' && (
               <div className="mt-5 flex flex-col gap-2 rounded-xl bg-danger-subtle px-4 py-3">
                 <p className="text-body-sm font-semibold leading-relaxed text-danger">
                   {chat.notice.message}
@@ -296,17 +306,20 @@ function ChatSession({
         )}
       </div>
 
+      <SafetyLine />
+
       <Composer
         running={chat.running}
-        canAttachImages={canAttachImages}
         initialAttachSku={initialAttachSku}
         onInitialAttachConsumed={onInitialAttachConsumed}
         initialDraft={initialDraft}
         onInitialDraftConsumed={onInitialDraftConsumed}
         onSend={(text, attachments) => {
-          handleSend(text, attachments)
+          const accepted = handleSend(text, attachments)
+          if (!accepted) return false
           // Sending declares "I'm following again" — re-pin.
           void stick.scrollToBottom()
+          return true
         }}
         onStop={chat.stop}
         onScanAttach={scan.requestAttachScan}
@@ -344,7 +357,29 @@ function ChatSession({
         open={modelSheetOpen}
         onClose={() => setModelSheetOpen(false)}
       />
+
+      <SensitiveContentSheet
+        open={chat.notice?.kind === 'sensitive'}
+        reason={chat.notice?.kind === 'sensitive' ? chat.notice.message : ''}
+        onClose={closeSensitiveSheet}
+      />
     </div>
+  )
+}
+
+function SafetyLine() {
+  return (
+    <aside
+      aria-label="Privacy and confidentiality warning"
+      className="flex shrink-0 items-center justify-center gap-1.5 border-t border-line px-4 py-1.5 text-micro leading-snug text-text-faint"
+    >
+      <ShieldCheck
+        size={12}
+        className="shrink-0 text-action"
+        aria-hidden="true"
+      />
+      <p>Public product info only. No personal or internal Best Buy data.</p>
+    </aside>
   )
 }
 

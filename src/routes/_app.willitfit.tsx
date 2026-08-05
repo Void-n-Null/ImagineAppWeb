@@ -202,6 +202,9 @@ function WillItFitExperience({ sku }: WillItFitSearch) {
       append: (message) => {
         transcript.push(message)
       },
+      replaceTranscript: (messages) => {
+        transcript.splice(0, transcript.length, ...messages)
+      },
       setActivity: () => {},
       setDraft: () => {},
       setNotice: (nextNotice) => {

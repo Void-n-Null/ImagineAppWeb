@@ -41,7 +41,18 @@ import {
   removeCartItem,
 } from '#/features/cart/cart-store'
 import { getSelectedModelId } from '#/features/models/selected-model'
-import { type ChatNotice, driveTurns, type TurnSink } from './agent-transport'
+import {
+  buildTurnRequestBody,
+  type ChatNotice,
+  driveTurns,
+  type TurnSink,
+} from './agent-transport'
+import {
+  inspectOutboundMessage,
+  inspectUntrustedTurnRequest,
+  SENSITIVE_CONTEXT_BLOCK_MESSAGE,
+  sensitiveContentBlockMessage,
+} from './content-safety'
 import { loadTranscript, saveThread } from './threads/thread-store'
 import { syncThreadUp } from './threads/thread-sync'
 import { THREADS_QUERY_KEY } from './threads/use-threads'
@@ -64,7 +75,8 @@ export interface UseAgentChat {
       products?: ProductAttachment[]
       images?: ImageAttachment[]
     },
-  ) => void
+  ) => boolean
+  dismissNotice: () => void
   stop: () => void
 }
 
@@ -140,14 +152,9 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChat {
     [],
   )
 
-  const append = useCallback(
-    (message: ChatMessage) => {
-      transcriptRef.current = [...transcriptRef.current, message]
-      setTranscript(transcriptRef.current)
-      // Best-effort persistence at message cadence; the conversation lives
-      // in memory regardless, so a failed write costs history, not the chat.
+  const persistTranscript = useCallback(
+    (snapshot: ChatMessage[]) => {
       const id = optionsRef.current.threadId
-      const snapshot = transcriptRef.current
       void saveThread(id, snapshot)
         .then(() =>
           queryClient.invalidateQueries({ queryKey: THREADS_QUERY_KEY }),
@@ -159,6 +166,23 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChat {
       syncThreadUp(id, snapshot)
     },
     [queryClient],
+  )
+
+  const replaceTranscript = useCallback(
+    (messages: ChatMessage[]) => {
+      transcriptRef.current = messages
+      setTranscript(messages)
+      persistTranscript(messages)
+    },
+    [persistTranscript],
+  )
+
+  const append = useCallback(
+    (message: ChatMessage) => {
+      const messages = [...transcriptRef.current, message]
+      replaceTranscript(messages)
+    },
+    [replaceTranscript],
   )
 
   // Apply a {type:'cart'} event the server emitted after mutating its per-turn
@@ -183,10 +207,38 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChat {
 
   const send = useCallback<UseAgentChat['send']>(
     (text, attachments) => {
-      if (hydratingRef.current) return // never overwrite an unloaded thread
-      if (abortRef.current) return // one run at a time
+      if (hydratingRef.current) return false // never overwrite an unloaded thread
+      if (abortRef.current) return false // one run at a time
 
-      append(userMessage(text, attachments))
+      const opts = optionsRef.current
+      const toolsEnabled = opts.buildRegistry().schemas.length > 0
+      const model = getSelectedModelId()
+      const nextMessage = userMessage(text, attachments)
+      const directFindings = inspectOutboundMessage(text, attachments)
+      const initialBody = buildTurnRequestBody({
+        messages: [...transcriptRef.current, nextMessage],
+        model,
+        toolsEnabled,
+        cart: getCartItems(),
+        clock: {
+          iso: new Date().toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      })
+      const requestFindings = inspectUntrustedTurnRequest(initialBody)
+      if (requestFindings.length > 0) {
+        setNotice({
+          kind: 'sensitive',
+          message:
+            directFindings.length > 0
+              ? sensitiveContentBlockMessage(directFindings)
+              : SENSITIVE_CONTEXT_BLOCK_MESSAGE,
+          authExpired: false,
+        })
+        return false
+      }
+
+      append(nextMessage)
       setNotice(null)
       setActivity('Thinking')
       setRunning(true)
@@ -194,22 +246,21 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChat {
       const controller = new AbortController()
       abortRef.current = controller
 
-      const opts = optionsRef.current
       // The server builds its own registry; we only need the flag telling it
       // whether this model gets tools (IMA-17).
-      const toolsEnabled = opts.buildRegistry().schemas.length > 0
       const toolsUsed = new Set<string>()
       let completed = false
 
       const sink: TurnSink = {
         getTranscript: () => transcriptRef.current,
         append,
+        replaceTranscript,
         setActivity,
         setDraft,
         setNotice,
         applyCart,
         host: opts.host,
-        model: getSelectedModelId(),
+        model,
         toolsEnabled,
         getCart: getCartItems,
         onEvent: (event) => {
@@ -222,7 +273,7 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChat {
         },
       }
 
-      void driveTurns(sink, controller.signal)
+      void driveTurns(sink, controller.signal, initialBody)
         .then(() => {
           if (!controller.signal.aborted && completed) {
             opts.onTurnComplete?.({
@@ -240,13 +291,26 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChat {
           setActivity(null)
           setDraft(null)
         })
+      return true
     },
-    [append, applyCart],
+    [append, applyCart, replaceTranscript],
   )
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
   }, [])
 
-  return { transcript, draft, activity, running, hydrating, notice, send, stop }
+  const dismissNotice = useCallback(() => setNotice(null), [])
+
+  return {
+    transcript,
+    draft,
+    activity,
+    running,
+    hydrating,
+    notice,
+    send,
+    dismissNotice,
+    stop,
+  }
 }

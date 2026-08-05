@@ -1,10 +1,7 @@
 import {
   ArrowUp,
-  Camera,
   Hash,
-  ImagePlus,
   Loader2,
-  Mic,
   Plus,
   ScanBarcode,
   Square,
@@ -12,27 +9,19 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import type {
-  ImageAttachment,
-  ProductAttachment,
-  ScanOutcome,
-} from '#/features/agent'
+import type { ProductAttachment, ScanOutcome } from '#/features/agent'
 import { formatAttachmentContext } from '#/features/agent/tools'
 import { cn } from '#/lib/utils'
 import { getProductDetail } from '#/server/functions/get-product-detail'
-import { compressImageFile } from '../compress-image'
-import { useVoiceInput } from '../voice/use-voice-input'
-import { VoiceBar } from './voice-bar'
 
 /**
  * The chat input dock (IMA-6): floating chrome pinned to the bottom, in
  * thumb reach. One [+] gathers every way of pointing the assistant at a
- * product — photo (vision models), barcode scan, typed SKU — so the text
- * field stays a text field. Send flips to Stop while the agent runs.
+ * product through a barcode scan or typed SKU, so the text field stays a text
+ * field. Send flips to Stop while the agent runs.
  */
 export function Composer({
   running,
-  canAttachImages,
   initialAttachSku,
   onInitialAttachConsumed,
   initialDraft,
@@ -42,7 +31,6 @@ export function Composer({
   onScanAttach,
 }: {
   running: boolean
-  canAttachImages: boolean
   /** Pre-attach this SKU on mount — the product page's "Ask assistant"
    *  deep link (IMA-29). Consumed once; served from today's cache. */
   initialAttachSku?: number
@@ -53,45 +41,26 @@ export function Composer({
   onInitialDraftConsumed?: () => void
   onSend: (
     text: string,
-    attachments: { products: ProductAttachment[]; images: ImageAttachment[] },
-  ) => void
+    attachments: { products: ProductAttachment[] },
+  ) => boolean
   onStop: () => void
   onScanAttach: () => Promise<ScanOutcome>
 }) {
   const [text, setText] = useState(initialDraft ?? '')
   const [products, setProducts] = useState<ProductAttachment[]>([])
-  const [images, setImages] = useState<ImageAttachment[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [skuMode, setSkuMode] = useState(false)
   const [attachError, setAttachError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Voice input (IMA-25): transcript lands in the draft, never auto-sends.
-  const voice = useVoiceInput({
-    onTranscript: (transcript) => {
-      setText((prev) =>
-        prev.trim().length > 0 ? `${prev.trimEnd()} ${transcript}` : transcript,
-      )
-      // Re-fit the textarea once React has committed the new value.
-      requestAnimationFrame(() => {
-        const el = textareaRef.current
-        if (!el) return
-        el.style.height = 'auto'
-        el.style.height = `${Math.min(el.scrollHeight, 128)}px`
-      })
-    },
-  })
-
-  const hasAttachments = products.length > 0 || images.length > 0
+  const hasAttachments = products.length > 0
   const canSend = !running && (text.trim().length > 0 || hasAttachments)
 
   const submit = () => {
     if (!canSend) return
-    onSend(text.trim(), { products, images })
+    if (!onSend(text.trim(), { products })) return
     setText('')
     setProducts([])
-    setImages([])
     setAttachError(null)
     const textarea = textareaRef.current
     if (textarea) textarea.style.height = 'auto'
@@ -142,19 +111,6 @@ export function Composer({
       .finally(() => onInitialAttachConsumed?.())
   }, [])
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-    setAttachError(null)
-    try {
-      const compressed = await Promise.all(
-        [...files].slice(0, 4).map(compressImageFile),
-      )
-      setImages((prev) => [...prev, ...compressed].slice(0, 4))
-    } catch {
-      setAttachError('Could not read that image.')
-    }
-  }
-
   const handleScanAttach = () => {
     setMenuOpen(false)
     void onScanAttach().then((outcome) => {
@@ -181,40 +137,8 @@ export function Composer({
             </p>
           )}
 
-          {voice.error && (
-            <p className="flex items-start justify-between gap-2 px-3 pt-1 pb-1.5 text-caption font-semibold text-danger">
-              {voice.error}
-              <button
-                type="button"
-                onClick={voice.dismissError}
-                aria-label="Dismiss voice input notice"
-                className="shrink-0 text-text-faint"
-              >
-                <X size={13} aria-hidden="true" />
-              </button>
-            </p>
-          )}
-
           {hasAttachments && (
             <div className="scrollbar-none flex gap-1.5 overflow-x-auto px-1 pt-1 pb-2">
-              {images.map((image, index) => (
-                <span
-                  key={image.dataUrl.slice(-24)}
-                  className="relative shrink-0"
-                >
-                  <img
-                    src={image.dataUrl}
-                    alt="Attachment preview"
-                    className="h-14 w-14 rounded-lg border border-line object-cover"
-                  />
-                  <RemoveDot
-                    label="Remove image"
-                    onClick={() =>
-                      setImages((prev) => prev.filter((_, i) => i !== index))
-                    }
-                  />
-                </span>
-              ))}
               {products.map((product) => (
                 <span
                   key={product.sku}
@@ -256,166 +180,99 @@ export function Composer({
             />
           )}
 
-          {voice.state === 'recording' ? (
-            <VoiceBar
-              startedAt={voice.startedAt}
-              levelsRef={voice.levelsRef}
-              onCancel={voice.cancel}
-              onFinish={voice.finish}
-            />
-          ) : (
-            <div className="flex items-end gap-1.5">
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-label="Add attachment"
-                  aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen((open) => !open)}
-                  className={cn(
-                    'grid h-10 w-10 shrink-0 place-items-center rounded-full transition-all duration-150 active:scale-95',
-                    menuOpen
-                      ? 'rotate-45 bg-action-subtle text-action'
-                      : 'bg-raised text-text-muted',
-                  )}
-                >
-                  <Plus size={20} aria-hidden="true" />
-                </button>
-
-                {menuOpen && (
-                  <>
-                    <button
-                      type="button"
-                      aria-label="Close menu"
-                      onClick={() => setMenuOpen(false)}
-                      className="fixed inset-0 z-0 cursor-default"
-                      tabIndex={-1}
-                    />
-                    <div className="chrome-float absolute bottom-12 left-0 z-10 w-56 rounded-xl p-1.5">
-                      <AttachOption
-                        icon={
-                          canAttachImages ? (
-                            <Camera size={17} aria-hidden="true" />
-                          ) : (
-                            <ImagePlus size={17} aria-hidden="true" />
-                          )
-                        }
-                        label="Photo"
-                        hint={
-                          canAttachImages
-                            ? 'Show the assistant something'
-                            : 'Selected model has no vision'
-                        }
-                        disabled={!canAttachImages}
-                        onClick={() => {
-                          setMenuOpen(false)
-                          fileInputRef.current?.click()
-                        }}
-                      />
-                      <AttachOption
-                        icon={<ScanBarcode size={17} aria-hidden="true" />}
-                        label="Scan barcode"
-                        hint="Attach the product in hand"
-                        onClick={handleScanAttach}
-                      />
-                      <AttachOption
-                        icon={<Hash size={17} aria-hidden="true" />}
-                        label="Enter SKU"
-                        hint="From a shelf tag"
-                        onClick={() => {
-                          setMenuOpen(false)
-                          setSkuMode(true)
-                        }}
-                      />
-                    </div>
-                  </>
+          <div className="flex items-end gap-1.5">
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Add attachment"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+                className={cn(
+                  'grid h-10 w-10 shrink-0 place-items-center rounded-full transition-all duration-150 active:scale-95',
+                  menuOpen
+                    ? 'rotate-45 bg-action-subtle text-action'
+                    : 'bg-raised text-text-muted',
                 )}
-              </div>
+              >
+                <Plus size={20} aria-hidden="true" />
+              </button>
 
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={(event) => {
-                  setText(event.target.value)
-                  const el = event.target
-                  el.style.height = 'auto'
-                  el.style.height = `${Math.min(el.scrollHeight, 128)}px`
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault()
-                    submit()
-                  }
-                }}
-                rows={1}
-                enterKeyHint="send"
-                placeholder={
-                  voice.state === 'transcribing'
-                    ? 'Transcribing…'
-                    : 'Ask about a product…'
-                }
-                aria-label="Message"
-                className="focus-quiet max-h-32 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-body-lg leading-snug placeholder:text-text-faint"
-              />
-
-              {voice.supported &&
-                (voice.state === 'transcribing' ? (
-                  <output
-                    aria-label="Transcribing"
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-raised text-action"
-                  >
-                    <Loader2
-                      size={18}
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
-                  </output>
-                ) : (
+              {menuOpen && (
+                <>
                   <button
                     type="button"
-                    onClick={voice.start}
-                    aria-label="Dictate a message"
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-raised text-text-muted transition-transform duration-100 active:scale-95"
-                  >
-                    <Mic size={18} aria-hidden="true" />
-                  </button>
-                ))}
-
-              {running ? (
-                <button
-                  type="button"
-                  onClick={onStop}
-                  aria-label="Stop the assistant"
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-action text-action-ink transition-transform duration-100 active:scale-95"
-                >
-                  <Square size={14} fill="currentColor" aria-hidden="true" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={submit}
-                  disabled={!canSend}
-                  aria-label="Send message"
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-action text-action-ink transition-all duration-100 active:scale-95 disabled:opacity-35"
-                >
-                  <ArrowUp size={19} strokeWidth={2.5} aria-hidden="true" />
-                </button>
+                    aria-label="Close menu"
+                    onClick={() => setMenuOpen(false)}
+                    className="fixed inset-0 z-0 cursor-default"
+                    tabIndex={-1}
+                  />
+                  <div className="chrome-float absolute bottom-12 left-0 z-10 w-56 rounded-xl p-1.5">
+                    <AttachOption
+                      icon={<ScanBarcode size={17} aria-hidden="true" />}
+                      label="Scan barcode"
+                      hint="Attach the product in hand"
+                      onClick={handleScanAttach}
+                    />
+                    <AttachOption
+                      icon={<Hash size={17} aria-hidden="true" />}
+                      label="Enter SKU"
+                      hint="From a shelf tag"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        setSkuMode(true)
+                      }}
+                    />
+                  </div>
+                </>
               )}
             </div>
-          )}
+
+            <textarea
+              id="chat-message"
+              ref={textareaRef}
+              value={text}
+              onChange={(event) => {
+                setText(event.target.value)
+                const el = event.target
+                el.style.height = 'auto'
+                el.style.height = `${Math.min(el.scrollHeight, 128)}px`
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault()
+                  submit()
+                }
+              }}
+              rows={1}
+              enterKeyHint="send"
+              placeholder="Ask about a product..."
+              aria-label="Message"
+              className="focus-quiet max-h-32 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-body-lg leading-snug placeholder:text-text-faint"
+            />
+
+            {running ? (
+              <button
+                type="button"
+                onClick={onStop}
+                aria-label="Stop the assistant"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-action text-action-ink transition-transform duration-100 active:scale-95"
+              >
+                <Square size={14} fill="currentColor" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!canSend}
+                aria-label="Send message"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-action text-action-ink transition-all duration-100 active:scale-95 disabled:opacity-35"
+              >
+                <ArrowUp size={19} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(event) => {
-          void handleFiles(event.target.files)
-          event.target.value = ''
-        }}
-      />
     </div>
   )
 }
