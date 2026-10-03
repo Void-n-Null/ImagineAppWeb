@@ -272,6 +272,9 @@ export function Composer({
             )}
           </div>
         </div>
+        <p className="pt-1.5 text-center text-micro text-text-faint">
+          AI answers can be wrong. Verify on bestbuy.com before buying.
+        </p>
       </div>
     </div>
   )

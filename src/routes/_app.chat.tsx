@@ -653,7 +653,45 @@ function EmptyState({
           </button>
         ))}
       </div>
+      <AiNotice />
     </div>
+  )
+}
+
+/** Responsible-use notice on every empty chat: the model can be wrong, keep
+ *  customer PII out, and how long chats are kept. */
+function AiNotice() {
+  return (
+    <section
+      aria-labelledby="ai-notice-title"
+      className="rise-in w-full max-w-sm rounded-xl bg-raised px-4 py-3.5 text-left"
+      style={{ animationDelay: '120ms' }}
+    >
+      <h2
+        id="ai-notice-title"
+        className="flex items-center gap-1.5 text-body-sm font-bold"
+      >
+        <ShieldCheck size={15} aria-hidden="true" className="text-action" />
+        Before you ask
+      </h2>
+      <ul className="mt-2 flex flex-col gap-1.5 text-caption leading-relaxed text-text-muted">
+        <li>
+          Answers are AI-generated and can be wrong. Confirm price, stock, and
+          specs on bestbuy.com before anyone buys.
+        </li>
+        <li>
+          Keep customer names, phone numbers, and payment info out of the chat.
+          The app blocks what it can detect, but not everything.
+        </li>
+        <li>
+          Chats are deleted from the server after 72 hours, and model providers
+          can’t keep or train on them.{' '}
+          <Link to="/privacy" className="font-semibold text-action">
+            Privacy
+          </Link>
+        </li>
+      </ul>
+    </section>
   )
 }
 
